@@ -22,7 +22,8 @@ export default defineConfig({
         product: 'product.html',
         preview: 'preview.html',
         history: 'history.html',
-        outlet_management: 'outlet_management.html'
+        outlet_management: 'outlet_management.html',
+        order_management:'order_management.html'
       }
     }
   }
