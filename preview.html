@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单预览 - Order Preview - SHIAWASE (S) PTE LTD</title>
+    <!-- Vue 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <!-- External CSS -->
+    <link rel="stylesheet" href="preview.css">
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { firebaseConfig, emailjsPublicKey, emailjsServiceId, emailjsTemplateId } from './secrets.js';
+        /* Import the functions you need from the SDKs you need */
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { 
+        getFirestore, 
+        collection, 
+        doc, 
+        setDoc, 
+        getDoc,
+        runTransaction,
+        serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        /* Initialize Firebase */
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        /* Initialize EmailJS */
+        (function() {
+            emailjs.init(emailjsPublicKey);
+        })();
+
+        /* Create Vue app after Firebase is initialized */
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        createApp({
+            setup() {
+                const orderItems = ref([]);
+                const subTotal = ref(0);
+                const gst = ref(0);
+                const grandTotal = ref(0);
+                const outletName = ref('');
+                const outletAddress = ref('');
+                const outletId = ref('ISF-CP');
+                const deliveryDate = ref('');
+                const remarks = ref('');
+                const referenceNumber = ref('');
+                const isSubmitting = ref(false);
+                const isSubmitSuccess = ref(false);
+                const errorMessage = ref('');
+                const currentHour = new Date().getHours();
+                const isAfterCutoff = currentHour >= 22;
+                const dateError = ref('');
+                const currentLang = ref('zh'); // Default to Chinese
+                const referringPage = ref('index.html'); // Default referring page
+                const isLoading = ref(true);
+                
+                // Translations - Only Chinese and English
+                const translations = {
+                    zh: {
+                        product: "产品",
+                        unitPrice: "单价",
+                        quantity: "数量",
+                        total: "总计",
+                        remove: "删除",
+                        subtotal: "小计",
+                        gst: "消费税 9%",
+                        grandTotal: "总计金额",
+                        deliveryDate: "送货日期",
+                        remarks: "备注",
+                        referenceNumber: "参考编号",
+                        optional: "备注和参考编号为选填项",
+                        confirm: "提交前请确认您的订单",
+                        cancel: "取消",
+                        submit: "提交",
+                        submitting: "提交中...",
+                        successTitle: "订单提交成功！",
+                        successMessage: "您的订单已收到并正在处理，您可以关闭此页面。",
+                        returnHome: "返回首页",
+                        goBack: "返回订单页面",
+                        note: "注意",
+                        noteContent: "您可以在确认订单前调整数量或删除商品",
+                        afterCutoff: "已超过截单时间（晚上10点）。您最早的送货日期为后天。",
+                        beforeCutoff: "请仔细检查日期。晚上10点后下的订单将在第二天处理。",
+                        enterRemarks: "在此输入备注",
+                        enterReference: "在此输入参考编号"
+                    },
+                    en: {
+                        product: "Product",
+                        unitPrice: "Unit Price",
+                        quantity: "Quantity",
+                        total: "Total",
+                        remove: "Remove",
+                        subtotal: "Sub-Total",
+                        gst: "GST 9%",
+                        grandTotal: "Grand Total",
+                        deliveryDate: "Delivery Date",
+                        remarks: "Remarks",
+                        referenceNumber: "Reference Number",
+                        optional: "Remarks & Reference Number are optional",
+                        confirm: "Please confirm your orders before submission",
+                        cancel: "Cancel",
+                        submit: "Submit",
+                        submitting: "Submitting...",
+                        successTitle: "Order Submitted Successfully!",
+                        successMessage: "Your order has been received and is being processed. You can close this page now.",
+                        returnHome: "Return to Home",
+                        goBack: "Go Back to Order Page",
+                        note: "Note",
+                        noteContent: "You can adjust quantities or remove items before confirming your order",
+                        afterCutoff: "It is after the order cutoff time (10:00 PM). Your earliest delivery date is in 2 days.",
+                        beforeCutoff: "Kindly double check the date. Orders placed after 10:00 PM will be processed the next day.",
+                        enterRemarks: "Enter your remarks here",
+                        enterReference: "Enter your reference here"
+                    }
+                };
+                const extractChinesePart = (unit) => {
+                return unit.split(' ')[0];
+            };
+
+            // Function to extract English part from unit format
+            const extractEnglishPart = (unit) => {
+                const match = unit.match(/\(([^)]+)\)/);
+                return match ? match[1] : unit;
+            };
+
+            // Function to get the appropriate unit display based on language
+            const getUnitDisplay = (unit) => {
+                if (!unit) return '';
+                
+                // If the unit already contains both parts (Chinese + English in parentheses)
+                if (unit.includes('(') && unit.includes(')')) {
+                    return currentLang.value === 'en' ? extractEnglishPart(unit) : unit;
+                }
+                
+                // If it's only the Chinese character (from database)
+                const matchingUnit = unitOptions.value.find(u => extractChinesePart(u) === unit);
+                if (matchingUnit) {
+                    return currentLang.value === 'en' ? extractEnglishPart(matchingUnit) : unit;
+                }
+                
+                return unit;
+            };
+                // Function to get translation
+                const t = (key) => {
+                    return translations[currentLang.value][key] || key;
+                };
+                
+                // Toggle language between Chinese and English only
+                const toggleLanguage = () => {
+                    currentLang.value = currentLang.value === 'zh' ? 'en' : 'zh';
+                };
+                
+                /* Helper function for proper rounding to 2 decimal places */
+                const roundToTwoDecimals = (value) => {
+                    return Math.round((value + Number.EPSILON) * 100) / 100;
+                };
+
+                /* Format to 2 decimal places, ensuring proper display */
+                const formatCurrency = (value) => {
+                    return roundToTwoDecimals(value).toFixed(2);
+                };
+                
+                /* Functions to get appropriate delivery date */
+                function getDefaultDeliveryDate() {
+                    const now = new Date();
+                    const currentHour = now.getHours();
+                    
+                    // If time is 10pm (22:00) or later, delivery date should be 2 days later
+                    const daysToAdd = currentHour >= 22 ? 2 : 1;
+                    
+                    const deliveryDate = new Date();
+                    deliveryDate.setDate(deliveryDate.getDate() + daysToAdd);
+                    
+                    // Format for input type="date" needs to be YYYY-MM-DD
+                    const year = deliveryDate.getFullYear();
+                    const month = String(deliveryDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(deliveryDate.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+                
+                /* Function to get minimum allowed delivery date (always tomorrow) */
+                function getMinDeliveryDate() {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    
+                    // Format for input type="date" needs to be YYYY-MM-DD
+                    const year = tomorrow.getFullYear();
+                    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                    const day = String(tomorrow.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+                
+                /* Update quantity and recalculate totals */
+                const updateQuantity = (item, value) => {
+                    // Ensure quantity is not negative
+                    if (value < 0) value = 0;
+                    
+                    // Update the quantity
+                    item.quantity = value;
+                    
+                    // Recalculate the subtotal for this item
+                    item.subtotal = roundToTwoDecimals(item.price * item.quantity);
+                    
+                    // Recalculate the order totals
+                    updateOrderTotals();
+                };
+                
+                /* Update the order totals */
+                const updateOrderTotals = () => {
+                    // Calculate subtotal from all items
+                    subTotal.value = roundToTwoDecimals(
+                        orderItems.value.reduce((total, item) => total + (item.subtotal || 0), 0)
+                    );
+                    
+                    // Calculate GST (9%)
+                    gst.value = roundToTwoDecimals(subTotal.value * 0.09);
+                    
+                    // Calculate grand total
+                    grandTotal.value = roundToTwoDecimals(subTotal.value + gst.value);
+                    
+                    // Update localStorage with new totals
+                    updateLocalStorage();
+                };
+                
+                /* Update localStorage with current order data */
+                const updateLocalStorage = () => {
+                    // Separate regular items and custom items
+                    const regularItems = orderItems.value.filter(item => !item.isCustom);
+                    const customItems = orderItems.value.filter(item => item.isCustom);
+                    
+                    // Prepare updated order data
+                    const updatedOrderData = {
+                        outletId: outletId.value,
+                        outletName: outletName.value,
+                        outletAddress: outletAddress.value,
+                        items: regularItems,
+                        customItems: customItems,
+                        subTotal: subTotal.value,
+                        gst: gst.value,
+                        grandTotal: grandTotal.value
+                    };
+                    
+                    // Store updated data in localStorage
+                    localStorage.setItem('orderPreview', JSON.stringify(updatedOrderData));
+                };
+                
+                /* Remove an item from the order */
+                const removeItem = (index) => {
+                    // Remove the item at the specified index
+                    orderItems.value.splice(index, 1);
+                    
+                    // If there are no items left, go back to the order page
+                    if (orderItems.value.length === 0) {
+                        errorMessage.value = '没有商品。返回订单页面... / No items in order. Redirecting back to order page...';
+                        
+                        // Give the user a moment to see the message before redirecting
+                        setTimeout(() => {
+                            cancelOrder();
+                        }, 2000);
+                        
+                        return;
+                    }
+                    
+                    // Recalculate totals
+                    updateOrderTotals();
+                };
+                
+                /* Read order data from localStorage (set by index page) */
+                onMounted(() => {
+                    try {
+                        // Get order data from localStorage
+                        const orderData = JSON.parse(localStorage.getItem('orderPreview') || '{}');
+                        
+                        // Check if we have valid order data
+                        if ((!orderData.items || orderData.items.length === 0) && (!orderData.customItems || orderData.customItems.length === 0)) {
+                            // No valid order data found - redirect back to order page
+                            errorMessage.value = '没有有效的订单数据。返回订单页面... / No valid order data found. Redirecting back to order page...';
+                            
+                            // Give the user a moment to see the error before redirecting
+                            setTimeout(() => {
+                                window.location.href = referringPage.value || 'index.html';
+                            }, 2000);
+                            
+                            return;
+                        }
+                        
+                        // Set values from stored data
+                        orderItems.value = orderData.items || [];
+                        
+                        // Add custom items to orderItems if they exist
+                        if (orderData.customItems && orderData.customItems.length > 0) {
+                            orderItems.value = [
+                                ...orderItems.value,
+                                ...orderData.customItems.map(item => ({
+                                    ...item,
+                                    price: 0,
+                                    quantity: 1,
+                                    subtotal: 0,
+                                    isCustom: true
+                                }))
+                            ];
+                        }
+                        
+                        // Set order totals from storage or calculate them
+                        if (orderData.subTotal) subTotal.value = orderData.subTotal;
+                        else subTotal.value = calculateSubtotal();
+                        
+                        if (orderData.gst) gst.value = orderData.gst;
+                        else gst.value = roundToTwoDecimals(subTotal.value * 0.09);
+                        
+                        if (orderData.grandTotal) grandTotal.value = orderData.grandTotal;
+                        else grandTotal.value = roundToTwoDecimals(subTotal.value + gst.value);
+                        
+                        // Set outlet info
+                        outletName.value = orderData.outletName || '';
+                        outletAddress.value = orderData.outletAddress || '';
+                        outletId.value = orderData.outletId || 'ISF-CP';
+                        
+                        // Set the referring page if provided
+                        if (orderData.referringPage) {
+                            referringPage.value = orderData.referringPage;
+                        }
+                        
+                        // Set default delivery date
+                        deliveryDate.value = getDefaultDeliveryDate();
+
+                        // Add a small delay before showing content to ensure smooth transition
+                        setTimeout(() => {
+                            isLoading.value = false;
+                            document.querySelector('.content-wrapper').classList.add('loaded');
+                        }, 300);
+                    } catch (error) {
+                        console.error('Error loading preview data:', error);
+                        errorMessage.value = '加载订单数据时出错。返回订单页面... / Error loading order data. Redirecting back to order page...';
+                        
+                        // Redirect back to order page after showing error
+                        setTimeout(() => {
+                            window.location.href = referringPage.value || 'index.html';
+                        }, 2000);
+                    }
+                });
+                
+                /* Calculate subtotal from items */
+                function calculateSubtotal() {
+                    return roundToTwoDecimals(
+                        orderItems.value.reduce((total, item) => total + (item.subtotal || 0), 0)
+                    );
+                }
+                
+                /* Validate delivery date before submission */
+                function validateDeliveryDate() {
+                    if (!deliveryDate.value) {
+                        dateError.value = '请选择送货日期 / Please select a delivery date';
+                        return false;
+                    }
+                    
+                    try {
+                        const selectedDate = new Date(deliveryDate.value);
+                        const minDate = new Date(getMinDeliveryDate());
+                        
+                        // Check if the selected date is valid
+                        if (isNaN(selectedDate.getTime())) {
+                            dateError.value = '日期格式无效 / Invalid date format';
+                            return false;
+                        }
+                        
+                        // Check if selected date is not before the minimum date
+                        if (selectedDate < minDate) {
+                            dateError.value = '送货日期不能早于明天 / Delivery date cannot be earlier than tomorrow';
+                            return false;
+                        }
+                        
+                        // All checks passed
+                        dateError.value = '';
+                        return true;
+                    } catch (e) {
+                        console.error('Date validation error:', e);
+                        dateError.value = '请选择有效的送货日期 / Please select a valid delivery date';
+                        return false;
+                    }
+                }
+                
+                /* Submit order to Firestore and send email */
+                async function submitOrder() {
+                    if (isSubmitting.value) return;
+                    
+                    // First validate the delivery date
+                    if (!validateDeliveryDate()) {
+                        // Scroll to the date input to show the error
+                        document.getElementById('delivery-date').scrollIntoView({ behavior: 'smooth' });
+                        return;
+                    }
+                    
+                    isSubmitting.value = true;
+                    errorMessage.value = '';
+                    
+                    try {
+                        // Get the next order number from counter document using a transaction
+                        let orderNumber = 0;
+                        const counterRef = doc(db, 'ordercounter', 'counter');
+                        
+                        await runTransaction(db, async (transaction) => {
+                            const counterDoc = await transaction.get(counterRef);
+                            
+                            // If the counter exists, get its current value, otherwise start at 1
+                            if (counterDoc.exists()) {
+                                orderNumber = counterDoc.data().number + 1;
+                            } else {
+                                orderNumber = 1;
+                            }
+                            
+                            // Update the counter with the incremented value
+                            transaction.set(counterRef, { number: orderNumber });
+                            return orderNumber;
+                        });
+                        
+                        // Generate a unique order ID (using order number for better tracking)
+                        const orderId = `ORD-${orderNumber}`;
+                        
+                        // Prepare order object with the order number
+                        const orderDocument = {
+                            id: orderId,
+                            orderNumber: orderNumber,
+                            outletId: outletId.value,           // Store outletId for filtering
+                            outletName: outletName.value,
+                            outletAddress: outletAddress.value,
+                            items: orderItems.value,
+                            subTotal: subTotal.value,
+                            gst: gst.value,
+                            grandTotal: grandTotal.value,
+                            deliveryDate: deliveryDate.value,
+                            remarks: remarks.value,
+                            referenceNumber: referenceNumber.value,
+                            status: 'pending',
+                            createdAt: serverTimestamp()
+                        };
+                        
+                        // Save to the centralized orders collection
+                        const orderRef = doc(collection(db, 'orders'), orderId);
+                        await setDoc(orderRef, orderDocument);
+
+                        // Prepare email template parameters
+                        const itemsString = `<ol style="padding-left: 20px; margin: 0;">
+                          ${orderItems.value.map(item =>
+                            `<li style="margin-bottom: 8px;">
+                              <strong>${item.name}</strong> (${item.chinese}${item.UOM ? ', ' + item.UOM : ''}) &times; ${item.quantity} @ $${formatCurrency(item.price)} = $${formatCurrency(item.subtotal)}
+                            </li>`
+                          ).join('')}
+                        </ol>`;
+
+                        const templateParams = {
+                          orderNumber: orderId,
+                          outletName: outletName.value,
+                          outletAddress: outletAddress.value,
+                          deliveryDate: deliveryDate.value,
+                          referenceNumber: referenceNumber.value || 'N/A',
+                          remarks: remarks.value || 'N/A',
+                          items: itemsString,
+                          subTotal: formatCurrency(subTotal.value),
+                          gst: formatCurrency(gst.value),
+                          grandTotal: formatCurrency(grandTotal.value)
+                        };
+
+                        // Send email using EmailJS
+                        try {
+                            await emailjs.send(emailjsServiceId, emailjsTemplateId, templateParams);
+                            console.log('Email sent successfully');
+                        } catch (emailError) {
+                            console.error('Error sending email:', emailError);
+                            // Don't throw the error - we still want to show success if the order was saved
+                        }
+                        
+                        // Clear localStorage
+                        localStorage.removeItem('orderPreview');
+                        
+                        // Set success state
+                        isSubmitSuccess.value = true;
+                        
+                        // Scroll to top to show success message
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    } catch (error) {
+                        console.error('Error submitting order:', error);
+                        errorMessage.value = '提交订单失败。请重试。 / Failed to submit order. Please try again.';
+                    } finally {
+                        isSubmitting.value = false;
+                    }
+                }
+                
+                /* Cancel and go back to main page */
+                function cancelOrder() {
+                    // Clear any existing preview data
+                    localStorage.removeItem('orderPreview');
+                    // Go back to referring page or default to index.html
+                    window.location.href = referringPage.value || 'index.html';
+                }
+
+                return {
+                    orderItems,
+                    subTotal,
+                    gst,
+                    grandTotal,
+                    outletName,
+                    outletAddress,
+                    deliveryDate,
+                    remarks,
+                    referenceNumber,
+                    isSubmitting,
+                    isSubmitSuccess,
+                    errorMessage,
+                    dateError,
+                    isAfterCutoff,
+                    isLoading,
+                    submitOrder,
+                    cancelOrder,
+                    getMinDeliveryDate,
+                    getDefaultDeliveryDate,
+                    formatCurrency,
+                    updateQuantity,
+                    updateOrderTotals,
+                    removeItem,
+                    currentLang,
+                    toggleLanguage,
+                    t,
+                    referringPage
+                };
+            }
+        }).mount('#app');
+    </script>
+    <style>
+        /* Add loading and transition styles */
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .content-wrapper {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .content-wrapper.loaded {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" v-if="isLoading">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
+                </div>
+                <div class="language-toggle" @click="toggleLanguage">
+                    <span v-if="currentLang === 'zh'">English</span>
+                    <span v-else>中文</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            <!-- Success message after submission -->
+            <div v-if="isSubmitSuccess" class="success-message">
+                <h2>{{ t('successTitle') }}</h2>
+                <p>{{ t('successMessage') }}</p>
+                <div class="btn-container">
+                    <button class="btn" @click="cancelOrder">{{ t('returnHome') }}</button>
+                </div>
+            </div>
+            
+            <!-- Error message if something goes wrong -->
+            <div v-if="errorMessage" class="error-message">
+                <p>{{ errorMessage }}</p>
+                <button v-if="!isSubmitSuccess" class="btn" @click="cancelOrder">{{ t('goBack') }}</button>
+            </div>
+            
+            <!-- Order preview content -->
+            <div v-if="!isSubmitSuccess && !errorMessage" class="content-inner">
+                <!-- Updated outlet info section to include address -->
+                <div class="outlet-info">
+                    <div class="outlet-name">{{ outletName }}</div>
+                    <div class="outlet-address" v-if="outletAddress">{{ outletAddress }}</div>
+                </div>
+                
+                <!-- Editable note -->
+                <div class="note-box">
+                    <p><strong>{{ t('note') }}:</strong> {{ t('noteContent') }}</p>
+                </div>
+                
+                <!-- Order items table -->
+                <div class="responsive-table">
+                    <table class="order-items">
+                        <thead>
+                            <tr>
+                                <th>{{ t('product') }}</th>
+                                <th>{{ t('unitPrice') }}</th>
+                                <th>{{ t('quantity') }}</th>
+                                <th>{{ t('total') }}</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, index) in orderItems" :key="item.id">
+                                <td>
+                                    <div class="product-info">
+                                        <img :src="item.image || '/api/placeholder/80/80'" :alt="item.name" class="product-image">
+                                        <div class="product-details">
+                                            <h3>{{ item.name }}</h3>
+                                            <p>{{ item.chinese }}</p>
+                                            <p v-if="item.UOM">{{item.UOM}}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="price-cell">${{ formatCurrency(item.price || 0) }}</td>
+                                <td class="quantity-cell">
+                                    <div class="qty-controls">
+                                        <button class="qty-btn" @click="updateQuantity(item, item.quantity - 1)">-</button>
+                                        <input 
+                                            type="number" 
+                                            class="qty-input" 
+                                            v-model.number="item.quantity" 
+                                            min="1" 
+                                            @change="updateQuantity(item, item.quantity)"
+                                        >
+                                        <button class="qty-btn" @click="updateQuantity(item, item.quantity + 1)">+</button>
+                                    </div>
+                                </td>
+                                <td class="total-cell">${{ formatCurrency(item.subtotal || 0) }}</td>
+                                <td class="action-cell">
+                                    <button class="remove-item" @click="removeItem(index)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                        </svg>
+                                        {{ t('remove') }}
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Order summary -->
+                <div class="order-summary">
+                    <div class="summary-row">
+                        <span>{{ t('subtotal') }}:</span>
+                        <span>$ {{ formatCurrency(subTotal) }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>{{ t('gst') }}:</span>
+                        <span>$ {{ formatCurrency(gst) }}</span>
+                    </div>
+                    <div class="summary-row grand-total">
+                        <span>{{ t('grandTotal') }}:</span>
+                        <span>$ {{ formatCurrency(grandTotal) }}</span>
+                    </div>
+                </div>
+                
+                <!-- Delivery information -->
+                <div class="delivery-info">
+                    <div class="form-group">
+                        <label for="delivery-date">{{ t('deliveryDate') }}:</label>
+                        <input 
+                            type="date" 
+                            id="delivery-date" 
+                            class="form-control" 
+                            :class="{ 'error': dateError }"
+                            v-model="deliveryDate" 
+                            :min="getMinDeliveryDate()"
+                            required
+                        >
+                        <div class="error-text" v-if="dateError">{{ dateError }}</div>
+                        <div class="form-note" v-if="isAfterCutoff">
+                            {{ t('afterCutoff') }}
+                        </div>
+                        <div class="form-note" v-else>
+                            {{ t('beforeCutoff') }}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="remarks">{{ t('remarks') }}:</label>
+                        <textarea id="remarks" class="form-control" v-model="remarks" rows="4" :placeholder="t('enterRemarks')"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reference">{{ t('referenceNumber') }}:</label>
+                        <input type="text" id="reference" class="form-control" v-model="referenceNumber" :placeholder="t('enterReference')">
+                        <div class="form-note">{{ t('optional') }}</div>
+                    </div>
+                </div>
+                
+                <!-- Confirmation notes -->
+                <div class="confirm-note">
+                    <p>{{ t('confirm') }}</p>
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="action-buttons">
+                    <button class="btn btn-cancel" @click="cancelOrder">{{ t('cancel') }}</button>
+                    <button class="btn btn-submit" @click="submitOrder" :disabled="isSubmitting">
+                        {{ isSubmitting ? t('submitting') : t('submit') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

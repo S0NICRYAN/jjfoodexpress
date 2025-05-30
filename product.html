@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>产品管理系统 - SHIAWASE (S) PTE LTD</title>
+    <link rel="stylesheet" href="product.css">
+    <!-- Vue 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+</head>
+<body>
+    <!-- Initial loading screen -->
+    <div id="initial-loading" class="app-loading">
+        <div class="app-loading-spinner"></div>
+        <div class="app-loading-text">Loading...</div>
+    </div>
+
+    <div id="app">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
+                </div>
+                <div class="header-actions">
+                    <div v-if="isAuthenticated" class="user-info">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                        </svg>
+                        {{ userEmail }}
+                    </div>
+                    <button class="back-btn" @click="goBack">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                        </svg>
+                        {{ t('back') || 'Back' }}
+                    </button>
+                    <button class="language-toggle" @click="toggleLanguage">
+                        {{ currentLang === 'zh' ? 'English' : '中文' }}
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <div class="container">
+            <!-- Auth loading state -->
+            <div v-if="isCheckingAuth" class="auth-loading">
+                <div class="loading-spinner"></div>
+                <p>{{ t('checkingAuth') || 'Checking authentication...' }}</p>
+            </div>
+            
+            <!-- Content is visible only when authenticated -->
+            <div v-else-if="isAuthenticated">
+                <h1>{{ t('appTitle') }} <span class="english-subtext" v-if="currentLang === 'zh'">Product Management</span></h1>
+                
+                <!-- Message display -->
+                <div v-if="message.text" :class="['message', message.type === 'success' ? 'message-success' : 'message-error']">
+                    {{ message.text }}
+                </div>
+                
+                <!-- Outlet selection -->
+                <div class="card">
+                    <div class="form-group">
+                        <label for="outlet">{{ t('selectOutlet') }} <span class="english-subtext" v-if="currentLang === 'zh'">Select Outlet:</span></label>
+                        
+                        <!-- Loading state for outlets -->
+                        <div v-if="isLoadingOutlets" class="loading-inline">
+                            {{ t('loadingOutlets') }}
+                        </div>
+                        
+                        <!-- Error message for outlets -->
+                        <div v-else-if="outletMessage.text" :class="['message', outletMessage.type === 'success' ? 'message-success' : 'message-error']">
+                            {{ outletMessage.text }}
+                        </div>
+                        
+                        <!-- Outlet dropdown -->
+                        <div v-else>
+                            <select 
+                                id="outlet" 
+                                class="form-control" 
+                                v-model="selectedOutlet" 
+                                :disabled="outlets.length === 0 || isLoadingOutlets">
+                                <option v-for="outlet in outlets" :key="outlet.id" :value="outlet.id">
+                                    {{ outlet.name }}
+                                </option>
+                            </select>
+                            <div class="import-section">
+                                <button 
+                                    v-if="outlets.length > 0" 
+                                    class="btn btn-primary import-products-btn" 
+                                    @click="showCopyModal = true"
+                                    :disabled="isLoadingOutlets">
+                                    {{ t('importProducts') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Copy Products Modal -->
+                <div v-if="showCopyModal" class="modal-overlay">
+                    <div class="modal-content">
+                        <h3>{{ t('importProducts') }}</h3>
+                        <p>{{ t('importProductsDescription') }}</p>
+                        
+                        <div class="form-group">
+                            <label for="sourceOutlet">{{ t('selectSourceOutlet') }}</label>
+                            <select 
+                                id="sourceOutlet" 
+                                class="form-control" 
+                                v-model="sourceOutlet"
+                                :disabled="isCopying">
+                                <option v-for="outlet in outlets" :key="outlet.id" :value="outlet.id">
+                                    {{ outlet.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="modal-actions">
+                            <button 
+                                class="btn btn-primary" 
+                                @click="copyProducts" 
+                                :disabled="!sourceOutlet || isCopying">
+                                {{ isCopying ? t('importing') : t('startImport') }}
+                            </button>
+                            <button 
+                                class="btn btn-secondary" 
+                                @click="showCopyModal = false"
+                                :disabled="isCopying">
+                                {{ t('cancel') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Product Form -->
+                <h2 id="product-form">{{ isEditing ? t('editProduct') : t('addNewProduct') }}
+                    <span class="english-subtext" v-if="currentLang === 'zh'">{{ isEditing ? 'Edit Product' : 'Add New Product' }}</span>
+                </h2>
+                <div class="card">
+                    <div class="form-row">
+                        <div class="form-group-flex">
+                            <label for="productName">{{ t('productNameEn') }} <span class="english-subtext" v-if="currentLang === 'zh'">Product Name (English):</span></label>
+                            <input type="text" id="productName" class="form-control" v-model="productName" :placeholder="t('enterProductName')">
+                        </div>
+                        
+                        <div class="form-group-flex">
+                            <label for="productChineseName">{{ t('productNameCn') }} <span class="english-subtext" v-if="currentLang === 'zh'">Product Name (Chinese):</span></label>
+                            <input type="text" id="productChineseName" class="form-control" v-model="productChineseName" :placeholder="t('enterChineseName')">
+                        </div>
+                    </div>
+                    <br>
+                    <div class="form-row">
+                        <div class="form-group-flex">
+                            <label for="productPrice">{{ t('price') }} <span class="english-subtext" v-if="currentLang === 'zh'">Price:</span></label>
+                            <input type="number" id="productPrice" class="form-control" v-model="productPrice" :placeholder="t('enterPrice')" step="0.01">
+                        </div>
+                        
+                        <div class="form-group-flex">
+                            <label for="productUnit">{{ t('unit') }} <span class="english-subtext" v-if="currentLang === 'zh'">Unit:</span></label>
+                            <select id="productUnit" class="form-control" v-model="productUnit">
+                                <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group-flex">
+                            <label for="productUOM">{{ t('uom') }} <span class="english-subtext" v-if="currentLang === 'zh'">UOM:</span></label>
+                            <input type="text" id="productUOM" class="form-control" v-model="productUOM" :placeholder="t('enterUOM')">
+                        </div>
+                    </div>
+                    <br>
+                    
+                    <div class="form-group">
+                        <label for="productImage">{{ t('productImage') }} <span class="english-subtext" v-if="currentLang === 'zh'">Product Image:</span></label>
+                        <input type="file" id="productImage" class="form-control" @change="handleImageSelected" accept="image/*">
+                        &nbsp
+                        <div class="file-size-info">{{ t('imageSizeInfo') }}</div>
+                        
+                        <div class="image-preview">
+                            <img v-if="imagePreview" :src="imagePreview" alt="Product Preview">
+                            <div v-else class="image-preview-empty">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                    <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                                </svg>
+                                {{ t('noImageSelected') }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="btn btn-primary" @click="submitForm" :disabled="isSubmitting">
+                            {{ isSubmitting ? t('saving') : (isEditing ? t('updateProduct') : t('addProduct')) }}
+                        </button>
+                        <button v-if="isEditing" class="btn btn-secondary" @click="resetForm">{{ t('cancelEditing') }}</button>
+                    </div>
+                </div>
+                
+                <!-- Product List -->
+                <h2>{{ t('productList') }} <span class="english-subtext" v-if="currentLang === 'zh'">Product List</span></h2>
+                <div class="card">
+                    <div class="search-container">
+                        <input type="text" class="search-input" v-model="searchQuery" :placeholder="t('searchProducts')">
+                    </div>
+                    
+                    <div v-if="isLoading" class="loading">{{ t('loadingProducts') }}</div>
+                    
+                    <div v-else-if="products.length === 0" class="empty-state">
+                        {{ t('noProductsFound') }}
+                    </div>
+                    
+                    <table v-else class="product-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">{{ t('image') }}</th>
+                                <th>{{ t('productName') }}</th>
+                                <th>{{ t('chineseName') }}</th>
+                                <th>{{ t('price') }}</th>
+                                <th>{{ t('unit') }}</th>
+                                <th>{{ t('uom') }}</th>
+                                <th>{{ t('actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="product in filteredProducts" :key="product.id">
+                                <td>
+                                    <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">                                </td>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.cname }}</td>
+                                <td>${{ product.price }}</td>
+                                <td>{{ currentLang === 'en' ? getUnitDisplay(product.unit) : product.unit }}</td>
+                                <td>{{ product.UOM }}</td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn btn-secondary" @click="editProduct(product)">{{ t('edit') }}</button>
+                                        <button class="btn btn-danger" @click="deleteProduct(product)">{{ t('delete') }}</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Not authenticated message -->
+            <div v-else class="auth-error">
+                <h2>{{ t('notAuthorized') || 'Not Authorized' }}</h2>
+                <p>{{ t('redirectingToLogin') || 'You are not authorized to access this page. Redirecting to home...' }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase v9 (modular) -->
+    <script type="module">
+        import { firebaseConfig } from './secrets.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            getDoc, 
+            getDocs, 
+            setDoc, 
+            updateDoc, 
+            deleteDoc, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { 
+            getAuth,
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Create Vue app
+        const { createApp, ref, onMounted, computed, watch } = Vue;
+        createApp({
+            setup() {
+                // Authentication states
+                const isAuthenticated = ref(false);
+                const isCheckingAuth = ref(true);
+                const userEmail = ref('');
+                
+                // Check authentication - simplified version
+                const checkAuthStatus = (user) => {
+                    if (user) {
+                        // User is signed in - we trust they're authorized
+                        isAuthenticated.value = true;
+                        userEmail.value = user.email;
+                    } else {
+                        // No user is signed in
+                        isAuthenticated.value = false;
+                        // Redirect to login page
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                    }
+                    isCheckingAuth.value = false;
+                };
+                
+                // Back button function
+                const goBack = () => {
+                    window.location.href = 'index.html';
+                };
+                
+                // Language settings
+                const languages = {
+                    zh: '中文',
+                    en: 'English'
+                };
+                
+                const currentLang = ref('zh'); // Default to Chinese
+                
+                // Translations
+                const translations = {
+                    appTitle: {
+                        zh: '产品管理系统',
+                        en: 'Product Management'
+                    },
+                    selectOutlet: {
+                        zh: '选择门店:',
+                        en: 'Select Outlet:'
+                    },
+                    addNewProduct: {
+                        zh: '添加新产品',
+                        en: 'Add New Product'
+                    },
+                    editProduct: {
+                        zh: '编辑产品',
+                        en: 'Edit Product'
+                    },
+                    productNameEn: {
+                        zh: '产品名称 (英文):',
+                        en: 'Product Name (English):'
+                    },
+                    productNameCn: {
+                        zh: '产品名称 (中文):',
+                        en: 'Product Name (Chinese):'
+                    },
+                    price: {
+                        zh: '价格:',
+                        en: 'Price:'
+                    },
+                    unit: {
+                        zh: '单位:',
+                        en: 'Unit:'
+                    },
+                    uom: {
+                        zh: '计量单位:',
+                        en: 'UOM (Unit of Measurement):'
+                    },
+                    productImage: {
+                        zh: '产品图片:',
+                        en: 'Product Image:'
+                    },
+                    imageSizeInfo: {
+                        zh: '* 图片大小必须小于 1MB',
+                        en: '* Images must be under 1MB in size'
+                    },
+                    noImageSelected: {
+                        zh: '未选择图片',
+                        en: 'No image selected'
+                    },
+                    saving: {
+                        zh: '保存中...',
+                        en: 'Saving...'
+                    },
+                    updateProduct: {
+                        zh: '更新产品',
+                        en: 'Update Product'
+                    },
+                    addProduct: {
+                        zh: '添加产品',
+                        en: 'Add Product'
+                    },
+                    cancelEditing: {
+                        zh: '取消编辑',
+                        en: 'Cancel Editing'
+                    },
+                    productList: {
+                        zh: '产品列表',
+                        en: 'Product List'
+                    },
+                    searchProducts: {
+                        zh: '搜索产品...',
+                        en: 'Search products...'
+                    },
+                    loadingProducts: {
+                        zh: '加载产品中...',
+                        en: 'Loading products...'
+                    },
+                    noProductsFound: {
+                        zh: '未找到此门店的产品。',
+                        en: 'No products found for this outlet.'
+                    },
+                    image: {
+                        zh: '图片',
+                        en: 'Image'
+                    },
+                    productName: {
+                        zh: '产品名称',
+                        en: 'Product Name'
+                    },
+                    chineseName: {
+                        zh: '中文名称',
+                        en: 'Chinese Name'
+                    },
+                    actions: {
+                        zh: '操作',
+                        en: 'Actions'
+                    },
+                    edit: {
+                        zh: '编辑',
+                        en: 'Edit'
+                    },
+                    delete: {
+                        zh: '删除',
+                        en: 'Delete'
+                    },
+                    enterProductName: {
+                        zh: '输入产品名称',
+                        en: 'Enter product name'
+                    },
+                    enterChineseName: {
+                        zh: '输入中文名称 (可选)',
+                        en: 'Enter Chinese name (optional)'
+                    },
+                    enterPrice: {
+                        zh: '输入价格',
+                        en: 'Enter price'
+                    },
+                    enterUOM: {
+                        zh: '例如：1KG, 500G, 5PCS (可选)',
+                        en: 'E.g., 1KG, 500G, 5PCS (optional)'
+                    },
+                    deleteConfirm: {
+                        zh: '您确定要删除 "{0}" 吗？',
+                        en: 'Are you sure you want to delete "{0}"?'
+                    },
+                    successDelete: {
+                        zh: '产品 "{0}" 已被删除。',
+                        en: 'Product "{0}" has been deleted.'
+                    },
+                    failedDelete: {
+                        zh: '删除产品失败: {0}',
+                        en: 'Failed to delete product: {0}'
+                    },
+                    successUpdate: {
+                        zh: '产品 "{0}" 已更新。',
+                        en: 'Product "{0}" has been updated.'
+                    },
+                    successAdd: {
+                        zh: '产品 "{0}" 已添加。',
+                        en: 'Product "{0}" has been added.'
+                    },
+                    failedSave: {
+                        zh: '保存产品失败: {0}',
+                        en: 'Failed to save product: {0}'
+                    },
+                    errorProductName: {
+                        zh: '请输入产品名称',
+                        en: 'Please enter a product name'
+                    },
+                    errorProductPrice: {
+                        zh: '请输入产品价格',
+                        en: 'Please enter a product price'
+                    },
+                    errorImageType: {
+                        zh: '请选择图片文件 (JPEG, PNG, GIF)',
+                        en: 'Please select an image file (JPEG, PNG, GIF)'
+                    },
+                    errorImageSize: {
+                        zh: '图片文件大小必须小于 1MB。请调整图片大小。',
+                        en: 'Image file size must be under 1MB. Please resize your image.'
+                    },
+                    loadingOutlets: {
+                        zh: '加载门店中...',
+                        en: 'Loading outlets...'
+                    },
+                    noOutletsFound: {
+                        zh: '未找到门店。',
+                        en: 'No outlets found.'
+                    },
+                    outletLoadError: {
+                        zh: '加载门店失败: {0}',
+                        en: 'Failed to load outlets: {0}'
+                    },
+                    // Authentication translations
+                    checkingAuth: {
+                        zh: '验证身份中...',
+                        en: 'Checking authentication...'
+                    },
+                    notAuthorized: {
+                        zh: '未授权访问',
+                        en: 'Not Authorized'
+                    },
+                    redirectingToLogin: {
+                        zh: '您无权访问此页面。正在重定向到首页...',
+                        en: 'You are not authorized to access this page. Redirecting to home...'
+                    },
+                    back: {
+                        zh: '返回',
+                        en: 'Back'
+                    },
+                    importProducts: {
+                        zh: '导入产品',
+                        en: 'Import Products'
+                    },
+                    importProductsDescription: {
+                        zh: '选择要从中导入产品的门店。这将导入所有产品到当前选中的门店。',
+                        en: 'Select the outlet to import products from. This will import all products to the currently selected outlet.'
+                    },
+                    selectSourceOutlet: {
+                        zh: '选择源门店:',
+                        en: 'Select Source Outlet:'
+                    },
+                    startImport: {
+                        zh: '开始导入',
+                        en: 'Start Import'
+                    },
+                    importing: {
+                        zh: '导入中...',
+                        en: 'Importing...'
+                    },
+                    cancel: {
+                        zh: '取消',
+                        en: 'Cancel'
+                    },
+                    importSuccess: {
+                        zh: '成功导入 {0} 个产品',
+                        en: 'Successfully imported {0} products'
+                    },
+                    importError: {
+                        zh: '导入产品时出错: {0}',
+                        en: 'Error importing products: {0}'
+                    }
+                };
+                
+                // Function to get translation
+                const t = (key, ...args) => {
+                    let text = translations[key]?.[currentLang.value] || key;
+                    if (args.length > 0) {
+                        args.forEach((arg, index) => {
+                            text = text.replace(`{${index}}`, arg);
+                        });
+                    }
+                    return text;
+                };
+                
+                // Outlet data
+                const outlets = ref([]);
+                const isLoadingOutlets = ref(false);
+                const outletMessage = ref({ type: '', text: '' });
+                
+                // Form data
+                const selectedOutlet = ref('');
+                const productId = ref('');
+                const productName = ref('');
+                const productChineseName = ref('');
+                const productPrice = ref('');
+                const productUnit = ref('包 (PACK)');
+                const productUOM = ref('');
+                const imageFile = ref(null);
+                const imagePreview = ref('');
+                const imageData = ref('');
+                
+                // UI states
+                const isLoading = ref(false);
+                const isSubmitting = ref(false);
+                const message = ref({ type: '', text: '' });
+                const isEditing = ref(false);
+                const products = ref([]);
+                const searchQuery = ref('');
+                
+                // Units options
+                const unitOptions = ref([
+                    '包 (PACK)', 
+                    '盒 (BOX)', 
+                    '桶 (TUB)', 
+                    '件 (PCS)', 
+                    '瓶 (BOTTLE)', 
+                    '箱 (CARTON)', 
+                    '袋 (BAG)'
+                ]);
+                
+                // Additional refs
+                const showCopyModal = ref(false);
+                const sourceOutlet = ref('');
+                const isCopying = ref(false);
+                
+                // Function to load outlets from Firestore
+                const loadOutlets = async () => {
+                    isLoadingOutlets.value = true;
+                    outletMessage.value = { type: '', text: '' };
+                    
+                    try {
+                        const outletsRef = collection(db, 'outlets');
+                        const snapshot = await getDocs(outletsRef);
+                        
+                        if (snapshot.empty) {
+                            outlets.value = [];
+                            outletMessage.value = { type: 'error', text: t('noOutletsFound') };
+                            return;
+                        }
+                        
+                        outlets.value = snapshot.docs.map(doc => {
+                            return {
+                                id: doc.id,
+                                name: doc.data().name || doc.id // Use data.name if available, otherwise use doc.id
+                            };
+                        });
+                        
+                        // Sort outlets by name for better UX
+                        outlets.value.sort((a, b) => a.name.localeCompare(b.name));
+                        
+                        // Set default selected outlet if we have outlets
+                        if (outlets.value.length > 0) {
+                            selectedOutlet.value = outlets.value[0].id;
+                            // Load products for the default outlet
+                            await loadProducts();
+                        }
+                    } catch (error) {
+                        console.error('Error loading outlets:', error);
+                        outletMessage.value = { type: 'error', text: t('outletLoadError', error.message) };
+                    } finally {
+                        isLoadingOutlets.value = false;
+                    }
+                };
+                
+                // Function to extract Chinese part from unit format
+                const extractChinesePart = (unit) => {
+                    return unit.split(' ')[0];
+                };
+                
+                // Function to extract English part from unit format
+                const extractEnglishPart = (unit) => {
+                    const match = unit.match(/\(([^)]+)\)/);
+                    return match ? match[1] : unit;
+                };
+                
+                // Function to get the appropriate unit display based on language
+                const getUnitDisplay = (unit) => {
+                    if (!unit) return '';
+                    
+                    // If the unit already contains both parts (Chinese + English in parentheses)
+                    if (unit.includes('(') && unit.includes(')')) {
+                        return currentLang.value === 'en' ? extractEnglishPart(unit) : unit;
+                    }
+                    
+                    // If it's only the Chinese character (from database)
+                    const matchingUnit = unitOptions.value.find(u => extractChinesePart(u) === unit);
+                    if (matchingUnit) {
+                        return currentLang.value === 'en' ? extractEnglishPart(matchingUnit) : unit;
+                    }
+                    
+                    return unit;
+                };
+                
+                // Generate random product ID
+                const generateProductId = () => {
+                    const timestamp = new Date().getTime().toString().slice(-6);
+                    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+                    return `PRD-${timestamp}-${random}`;
+                };
+                
+                // Handle image selection
+                const handleImageSelected = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    
+                    // Validate file type
+                    if (!file.type.match('image.*')) {
+                        message.value = { type: 'error', text: t('errorImageType') };
+                        return;
+                    }
+                    
+                    // Check file size - limit to 500KB
+                    if (file.size > 1 * 1024 * 1024) {
+                        message.value = { type: 'error', text: t('errorImageSize') };
+                        return;
+                    }
+                    
+                    // Read file as base64
+                    const reader = new FileReader();
+                    
+                    reader.onload = e => {
+                        imagePreview.value = e.target.result;
+                        imageData.value = e.target.result;
+                    };
+                    
+                    reader.readAsDataURL(file);
+                };
+                
+                // Reset form
+                const resetForm = () => {
+                    productId.value = '';
+                    productName.value = '';
+                    productChineseName.value = '';
+                    productPrice.value = '';
+                    productUnit.value = '包 (PACK)';
+                    productUOM.value = '';
+                    imageFile.value = null;
+                    imagePreview.value = '';
+                    imageData.value = '';
+                    isEditing.value = false;
+                };
+                
+                // Load products
+                const loadProducts = async () => {
+                    if (!selectedOutlet.value) return;
+                    
+                    isLoading.value = true;
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        const productsRef = collection(db, `outlets/${selectedOutlet.value}/products`);
+                        const snapshot = await getDocs(productsRef);
+                        
+                        if (snapshot.empty) {
+                            products.value = [];
+                            return;
+                        }
+                        
+                        products.value = snapshot.docs.map(doc => {
+                            return {
+                                id: doc.id,
+                                ...doc.data()
+                            };
+                        });
+                    } catch (error) {
+                        console.error('Error loading products:', error);
+                        message.value = { type: 'error', text: error.message };
+                    } finally {
+                        isLoading.value = false;
+                    }
+                };
+                
+                // Filter products
+                const filteredProducts = computed(() => {
+                    if (!searchQuery.value) {
+                        return products.value;
+                    }
+                    
+                    const query = searchQuery.value.toLowerCase();
+                    return products.value.filter(product => 
+                        (product.name && product.name.toLowerCase().includes(query)) || 
+                        (product.cname && product.cname.toLowerCase().includes(query)) ||
+                        (product.id && product.id.toLowerCase().includes(query))
+                    );
+                });
+                
+                // Edit product
+                const editProduct = (product) => {
+                    productId.value = product.id;
+                    productName.value = product.name || '';
+                    productChineseName.value = product.cname || '';
+                    productPrice.value = product.price || '';
+                    
+                    // Find the matching unit option for display
+                    const matchingUnit = unitOptions.value.find(u => extractChinesePart(u) === product.unit);
+                    productUnit.value = matchingUnit || product.unit || '包 (PACK)';
+                    
+                    productUOM.value = product.UOM || '';
+                    imagePreview.value = product.imageData || product.image || '';
+                    imageData.value = product.imageData || '';
+                    isEditing.value = true;
+                    
+                    // Scroll to form
+                    document.getElementById('product-form').scrollIntoView({ behavior: 'smooth' });
+                };
+                
+                // Delete product
+                const deleteProduct = async (product) => {
+                    if (!confirm(t('deleteConfirm', product.name))) {
+                        return;
+                    }
+                    
+                    isSubmitting.value = true;
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
+                        await deleteDoc(productRef);
+                        
+                        // Success message
+                        message.value = { type: 'success', text: t('successDelete', product.name) };
+                        
+                        // Reload products
+                        await loadProducts();
+                    } catch (error) {
+                        console.error('Error deleting product:', error);
+                        message.value = { type: 'error', text: t('failedDelete', error.message) };
+                    } finally {
+                        isSubmitting.value = false;
+                    }
+                };
+                
+                // Submit form
+                const submitForm = async () => {
+                    // Validate form
+                    if (!productName.value) {
+                        message.value = { type: 'error', text: t('errorProductName') };
+                        return;
+                    }
+                    
+                    if (!productPrice.value) {
+                        message.value = { type: 'error', text: t('errorProductPrice') };
+                        return;
+                    }
+                    
+                    isSubmitting.value = true;
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        // Generate ID if not editing
+                        if (!isEditing.value) {
+                            productId.value = generateProductId();
+                        }
+                        
+                        // Prepare product data
+                        const productData = {
+                            name: productName.value,
+                            cname: productChineseName.value,
+                            price: productPrice.value,
+                            unit: extractChinesePart(productUnit.value), // Only store Chinese part
+                            UOM: productUOM.value,
+                            updatedAt: serverTimestamp()
+                        };
+                        
+                        // Add image data directly to the document if available
+                        if (imageData.value) {
+                            productData.imageData = imageData.value;
+                        } else if (imagePreview.value && isEditing.value) {
+                            // Keep existing image if editing and no new file
+                            productData.imageData = imagePreview.value;
+                        }
+                        
+                        // If creating a new product, add creation timestamp
+                        if (!isEditing.value) {
+                            productData.createdAt = serverTimestamp();
+                        }
+                        
+                        // Save to Firestore
+                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, productId.value);
+                        
+                        if (isEditing.value) {
+                            await updateDoc(productRef, productData);
+                            message.value = { type: 'success', text: t('successUpdate', productName.value) };
+                        } else {
+                            await setDoc(productRef, productData);
+                            message.value = { type: 'success', text: t('successAdd', productName.value) };
+                        }
+                        
+                        // Reset form and reload products
+                        resetForm();
+                        await loadProducts();
+                    } catch (error) {
+                        console.error('Error saving product:', error);
+                        message.value = { type: 'error', text: t('failedSave', error.message) };
+                    } finally {
+                        isSubmitting.value = false;
+                    }
+                };
+                
+                // Copy products
+                const copyProducts = async () => {
+                    if (!sourceOutlet.value || !selectedOutlet.value) return;
+                    
+                    isCopying.value = true;
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        // Get products from source outlet
+                        const sourceProductsRef = collection(db, `outlets/${sourceOutlet.value}/products`);
+                        const snapshot = await getDocs(sourceProductsRef);
+                        
+                        if (snapshot.empty) {
+                            message.value = { type: 'error', text: t('noProductsFound') };
+                            return;
+                        }
+                        
+                        let copiedCount = 0;
+                        
+                        // Copy each product to the target outlet
+                        for (const docSnapshot of snapshot.docs) {
+                            const productData = docSnapshot.data();
+                            
+                            // Generate new ID for the copied product
+                            const newId = generateProductId();
+                            
+                            // Create new product document in target outlet
+                            const targetProductRef = doc(db, `outlets/${selectedOutlet.value}/products`, newId);
+                            
+                            // Add timestamps
+                            const productToSave = {
+                                ...productData,
+                                createdAt: serverTimestamp(),
+                                updatedAt: serverTimestamp()
+                            };
+                            
+                            await setDoc(targetProductRef, productToSave);
+                            copiedCount++;
+                        }
+                        
+                        message.value = { type: 'success', text: t('importSuccess', copiedCount) };
+                        showCopyModal.value = false;
+                        
+                        // Reload products in current outlet
+                        await loadProducts();
+                    } catch (error) {
+                        console.error('Error importing products:', error);
+                        message.value = { type: 'error', text: t('importError', error.message) };
+                    } finally {
+                        isCopying.value = false;
+                    }
+                };
+                
+                // Initialize
+                onMounted(() => {
+                    // Check authentication first
+                    onAuthStateChanged(auth, (user) => {
+                        checkAuthStatus(user);
+                        
+                        // Show app and hide loading screen after auth check
+                        document.getElementById('app').classList.add('loaded');
+                        document.getElementById('initial-loading').style.display = 'none';
+                    });
+                    
+                    // Load saved language preference
+                    const savedLang = localStorage.getItem('preferred_language');
+                    if (savedLang && (savedLang === 'zh' || savedLang === 'en')) {
+                        currentLang.value = savedLang;
+                    }
+                });
+                
+                // Load outlets and products once authentication is confirmed
+                watch(isAuthenticated, async (isAuthed) => {
+                    if (isAuthed) {
+                        await loadOutlets();
+                    }
+                });
+                
+                // Watch for outlet changes
+                watch(selectedOutlet, async () => {
+                    if (selectedOutlet.value) {
+                        resetForm();
+                        await loadProducts();
+                    }
+                });
+                
+                // Handle language switching
+                const toggleLanguage = () => {
+                    currentLang.value = currentLang.value === 'zh' ? 'en' : 'zh';
+                    // Save preference to localStorage
+                    localStorage.setItem('preferred_language', currentLang.value);
+                };
+                
+                return {
+                    currentLang,
+                    languages,
+                    t,
+                    toggleLanguage,
+                    outlets,
+                    isLoadingOutlets,
+                    outletMessage,
+                    selectedOutlet,
+                    productId,
+                    productName,
+                    productChineseName,
+                    productPrice,
+                    productUnit,
+                    productUOM,
+                    imageFile,
+                    imagePreview,
+                    isLoading,
+                    isSubmitting,
+                    message,
+                    isEditing,
+                    products,
+                    searchQuery,
+                    filteredProducts,
+                    unitOptions,
+                    extractChinesePart,
+                    extractEnglishPart,
+                    getUnitDisplay,
+                    handleImageSelected,
+                    resetForm,
+                    loadProducts,
+                    editProduct,
+                    deleteProduct,
+                    submitForm,
+                    isAuthenticated,
+                    isCheckingAuth,
+                    userEmail,
+                    goBack,
+                    showCopyModal,
+                    sourceOutlet,
+                    isCopying,
+                    copyProducts
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

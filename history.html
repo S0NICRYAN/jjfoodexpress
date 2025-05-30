@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order History - SHIAWASE (S) PTE LTD</title>
+    
+    <!-- Vue 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="order.css">
+    
+    
+    <!-- Firebase v9 (modular) -->
+    <script type="module">
+        import { firebaseConfig } from './secrets.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            query,
+            where,
+            orderBy,
+            limit,
+            getDocs, 
+            getDoc,
+            updateDoc,
+            doc,
+            Timestamp 
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        createApp({
+            setup() {
+                const isLoading = ref(true);
+                const errorMessage = ref('');
+                
+                // Outlet information
+                const outletId = ref('');
+                const outletName = ref('');
+                const outletAddress = ref('');
+                
+                // Orders list
+                const orders = ref([]);
+                
+                // Pagination
+                const currentPage = ref(1);
+                const ordersPerPage = 10;
+                const totalPages = computed(() => {
+                    return Math.ceil(filteredOrders.value.length / ordersPerPage);
+                });
+                
+                // Filters
+                const startDate = ref('');
+                const endDate = ref('');
+                const statusFilter = ref('all');
+                
+                // Order details modal
+                const showOrderDetails = ref(false);
+                const selectedOrder = ref(null);
+                const currentLang = ref('zh'); // Default to Chinese
+                const isUpdatingStatus = ref(false);
+                
+                // Translations
+                const translations = {
+                    zh: {
+                        orderHistory: "订单历史",
+                        dateRange: "日期范围",
+                        status: "状态",
+                        applyFilters: "应用筛选",
+                        reset: "重置",
+                        retry: "重试",
+                        noOrdersFound: "暂无订单历史记录",
+                        viewDetails: "查看详情",
+                        orderDetails: "订单详情",
+                        orderId: "订单编号",
+                        orderNumber: "订单号码",
+                        date: "日期",
+                        deliveryDate: "送货日期",
+                        referenceNumber: "参考编号",
+                        remarks: "备注",
+                        items: "商品",
+                        quantity: "数量",
+                        price: "价格",
+                        subtotal: "小计",
+                        gst: "消费税",
+                        grandTotal: "总计金额",
+                        printOrder: "打印订单",
+                        backToOrder: "返回订购",
+                        back: "返回",
+                        pcs: "个",
+                        box: "盒",
+                        kg: "公斤",
+                        g: "克",
+                        item: "项",
+                        bao: "包",
+                        jin: "斤",
+                        ping: "瓶",
+                        can: "罐",
+                        pack: "包",
+                        markAsDelivered: "标记为已送达",
+                        updating: "更新中...",
+                        statusUpdateSuccess: "订单状态已更新",
+                        statusUpdateError: "更新订单状态失败",
+                        cancelOrder: "取消订单"
+                    },
+                    en: {
+                        orderHistory: "Order History",
+                        dateRange: "Date Range",
+                        status: "Status",
+                        applyFilters: "Apply Filters",
+                        reset: "Reset",
+                        retry: "Retry",
+                        noOrdersFound: "No order history found",
+                        viewDetails: "View Details",
+                        orderDetails: "Order Details",
+                        orderId: "Order ID",
+                        orderNumber: "Order Number",
+                        date: "Date",
+                        deliveryDate: "Delivery Date",
+                        referenceNumber: "Reference Number",
+                        remarks: "Remarks",
+                        items: "Items",
+                        quantity: "Quantity",
+                        price: "Price",
+                        subtotal: "Subtotal",
+                        gst: "GST 9%",
+                        grandTotal: "Grand Total",
+                        printOrder: "Print Order",
+                        backToOrder: "Back to Order",
+                        back: "Back",
+                        pcs: "pcs",
+                        box: "box",
+                        kg: "kg",
+                        g: "g",
+                        item: "item",
+                        bao: "pack",
+                        jin: "catty",
+                        ping: "bottle",
+                        can: "can",
+                        pack: "pack",
+                        markAsDelivered: "Mark as Delivered",
+                        updating: "Updating...",
+                        statusUpdateSuccess: "Order status updated",
+                        statusUpdateError: "Failed to update order status",
+                        cancelOrder: "Cancel Order"
+                    }
+                };
+                
+                // Function to get translation (now shows both languages)
+                const t = (key) => {
+                    const zhText = translations.zh[key] || key;
+                    const enText = translations.en[key] || key;
+                    
+                    return `${zhText} (${enText})`;
+                };
+                
+                const translateUnit = (unit) => {
+                    if (!unit) return '';
+                    
+                    // Define a mapping of units to their translations
+                    const unitTranslations = {
+                        'pcs': { zh: '个', en: 'pcs' },
+                        'box': { zh: '盒', en: 'box' },
+                        'kg': { zh: '公斤', en: 'kg' },
+                        'g': { zh: '克', en: 'g' },
+                        'item': { zh: '项', en: 'item' },
+                        'bao': { zh: '包', en: 'pack' },
+                        'jin': { zh: '斤', en: 'catty' },
+                        'ping': { zh: '瓶', en: 'bottle' },
+                        'can': { zh: '罐', en: 'can' },
+                        'pack': { zh: '包', en: 'pack' },
+                        '个': { zh: '个', en: 'pcs' },
+                        '盒': { zh: '盒', en: 'box' },
+                        '公斤': { zh: '公斤', en: 'kg' },
+                        '克': { zh: '克', en: 'g' },
+                        '项': { zh: '项', en: 'item' },
+                        '包': { zh: '包', en: 'pack' },
+                        '斤': { zh: '斤', en: 'catty' },
+                        '瓶': { zh: '瓶', en: 'bottle' },
+                        '罐': { zh: '罐', en: 'can' }
+                    };
+                    
+                    // Convert unit to lowercase for case-insensitive matching
+                    const unitKey = unit.toLowerCase();
+                    
+                    // Check if we have a translation for this unit
+                    if (unitTranslations[unitKey]) {
+                        return `${unitTranslations[unitKey].zh} (${unitTranslations[unitKey].en})`;
+                    }
+                    
+                    // If no translation found, return the original unit
+                    return unit;
+                };
+                
+                // Language toggle function
+                const toggleLanguage = () => {
+                    currentLang.value = currentLang.value === 'zh' ? 'en' : 'zh';
+                };
+                
+                // Helper functions
+                const formatDate = (timestamp) => {
+                    if (!timestamp) return 'Unknown Date';
+                    
+                    let date;
+                    
+                    // Handle Firestore Timestamp or date objects
+                    if (timestamp.toDate) {
+                        date = timestamp.toDate();
+                    } else if (timestamp instanceof Date) {
+                        date = timestamp;
+                    } else if (typeof timestamp === 'string') {
+                        date = new Date(timestamp);
+                    } else {
+                        return 'Invalid Date';
+                    }
+                    
+                    return date.toLocaleDateString('en-SG', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+                
+                // Format date without time (for delivery date)
+                const formatDateNoTime = (dateStr) => {
+                    if (!dateStr) return 'Unknown Date';
+                    
+                    try {
+                        const date = new Date(dateStr);
+                        if (isNaN(date.getTime())) return dateStr; // Return original if invalid
+                        
+                        return date.toLocaleDateString('en-SG', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                    } catch (error) {
+                        return dateStr; // Return original if error
+                    }
+                };
+                
+                const formatCurrency = (value) => {
+                    if (typeof value !== 'number') {
+                        value = parseFloat(value) || 0;
+                    }
+                    return value.toFixed(2);
+                };
+                
+                // Get outlet ID from query parameter
+                const getOutletIdFromUrl = () => {
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const outlet = urlParams.get('outlet');
+                        console.log("Outlet from URL params:", outlet);
+                        return outlet || null;
+                    } catch (error) {
+                        console.error("Error getting outlet from URL:", error);
+                        return null;
+                    }
+                };
+                
+                // Fetch outlet data
+                const fetchOutletData = async (id) => {
+                    try {
+                        console.log('Fetching outlet data for ID:', id);
+                        
+                        if (!id) {
+                            errorMessage.value = 'No valid outlet ID provided';
+                            return false;
+                        }
+                        
+                        const outletRef = doc(db, 'outlets', id);
+                        const outletDoc = await getDoc(outletRef);
+                        
+                        if (!outletDoc.exists()) {
+                            console.error('Outlet document does not exist:', id);
+                            errorMessage.value = `Outlet with ID "${id}" not found`;
+                            return false;
+                        }
+                        
+                        const outletData = outletDoc.data();
+                        
+                        outletName.value = outletData.name || id;
+                        outletAddress.value = outletData.address || 'No address available';
+                        
+                        console.log('Set outlet name to:', outletName.value);
+                        console.log('Set outlet address to:', outletAddress.value);
+                        return true;
+                    } catch (error) {
+                        console.error('Error fetching outlet data:', error);
+                        errorMessage.value = `Failed to load outlet information: ${error.message}`;
+                        return false;
+                    }
+                };
+                
+                // Fetch order history for the outlet
+                const fetchOrderHistory = async () => {
+                    try {
+                        console.log('Fetching order history for outlet:', outletId.value);
+                        
+                        isLoading.value = true;
+                        orders.value = [];
+                        
+                        // Get orders for this outlet from the orders collection
+                        const ordersRef = collection(db, 'orders');
+                        const q = query(
+                            ordersRef,
+                            where('outletId', '==', outletId.value),
+                            orderBy('createdAt', 'desc') // Use createdAt instead of orderDate to match preview.html
+                        );
+                        
+                        const querySnapshot = await getDocs(q);
+                        
+                        if (querySnapshot.empty) {
+                            console.log('No orders found for this outlet');
+                            isLoading.value = false;
+                            return;
+                        }
+                        
+                        // Process orders
+                        const ordersList = [];
+                        querySnapshot.forEach(doc => {
+                            const orderData = doc.data();
+                            
+                            // Make sure we have all required fields
+                            ordersList.push({
+                                id: doc.id,
+                                ...orderData,
+                                orderDate: orderData.createdAt || orderData.orderDate, // Use createdAt as orderDate if available
+                                formattedDate: formatDate(orderData.createdAt || orderData.orderDate),
+                                status: orderData.status || 'pending' // Default to pending if status is not set
+                            });
+                        });
+                        
+                        orders.value = ordersList;
+                        console.log('Loaded orders:', orders.value);
+                        
+                    } catch (error) {
+                        console.error('Error loading order history:', error);
+                        errorMessage.value = `Failed to load order history: ${error.message}`;
+                    } finally {
+                        isLoading.value = false;
+                    }
+                };
+                
+                // Filter orders
+                const filteredOrders = computed(() => {
+                    let result = orders.value;
+                    
+                    // Filter by status
+                    if (statusFilter.value !== 'all') {
+                        result = result.filter(order => order.status === statusFilter.value);
+                    }
+                    
+                    // Filter by date range
+                    if (startDate.value) {
+                        const start = new Date(startDate.value);
+                        start.setHours(0, 0, 0, 0);
+                        
+                        result = result.filter(order => {
+                            const orderDate = order.orderDate instanceof Timestamp 
+                                ? order.orderDate.toDate() 
+                                : new Date(order.orderDate);
+                            return orderDate >= start;
+                        });
+                    }
+                    
+                    if (endDate.value) {
+                        const end = new Date(endDate.value);
+                        end.setHours(23, 59, 59, 999);
+                        
+                        result = result.filter(order => {
+                            const orderDate = order.orderDate instanceof Timestamp 
+                                ? order.orderDate.toDate() 
+                                : new Date(order.orderDate);
+                            return orderDate <= end;
+                        });
+                    }
+                    
+                    return result;
+                });
+                
+                // Paginated orders
+                const paginatedOrders = computed(() => {
+                    const startIndex = (currentPage.value - 1) * ordersPerPage;
+                    return filteredOrders.value.slice(startIndex, startIndex + ordersPerPage);
+                });
+                
+                // Apply filters
+                const applyFilters = () => {
+                    currentPage.value = 1; // Reset to first page when filtering
+                };
+                
+                // Reset filters
+                const resetFilters = () => {
+                    startDate.value = '';
+                    endDate.value = '';
+                    statusFilter.value = 'all';
+                    currentPage.value = 1;
+                };
+                
+                // Navigation helper functions
+                const goToOrderPage = () => {
+                    window.location.href = `order.html?outlet=${outletId.value}`;
+                };
+                
+                // View order details
+                const viewOrderDetails = (order) => {
+                    selectedOrder.value = order;
+                    showOrderDetails.value = true;
+                };
+                
+                // Close order details modal
+                const closeOrderDetails = () => {
+                    showOrderDetails.value = false;
+                };
+                
+                // Pagination handlers
+                const goToPage = (page) => {
+                    currentPage.value = page;
+                };
+                
+                const goToPreviousPage = () => {
+                    if (currentPage.value > 1) {
+                        currentPage.value--;
+                    }
+                };
+                
+                const goToNextPage = () => {
+                    if (currentPage.value < totalPages.value) {
+                        currentPage.value++;
+                    }
+                };
+                
+                // Update order status to delivered
+                const markAsDelivered = async (order) => {
+                    if (isUpdatingStatus.value) return;
+                    
+                    isUpdatingStatus.value = true;
+                    try {
+                        // Reference to the order document
+                        const orderRef = doc(db, 'orders', order.id);
+                        
+                        // Update the status to delivered
+                        await updateDoc(orderRef, {
+                            status: 'delivered'
+                        });
+                        
+                        // Update local order data
+                        order.status = 'delivered';
+                        
+                        // Show success message (could add a UI notification here)
+                        console.log(t('statusUpdateSuccess'));
+                        
+                        // Refresh order list
+                        await fetchOrderHistory();
+                        
+                    } catch (error) {
+                        console.error('Error updating order status:', error);
+                        errorMessage.value = t('statusUpdateError') + ': ' + error.message;
+                    } finally {
+                        isUpdatingStatus.value = false;
+                    }
+                };
+                
+                // Cancel order
+                const cancelOrder = async (order) => {
+                    if (isUpdatingStatus.value) return;
+                    isUpdatingStatus.value = true;
+                    try {
+                        const orderRef = doc(db, 'orders', order.id);
+                        await updateDoc(orderRef, {
+                            status: 'cancelled'
+                        });
+                        order.status = 'cancelled';
+                        await fetchOrderHistory();
+                    } catch (error) {
+                        console.error('Error cancelling order:', error);
+                        errorMessage.value = t('statusUpdateError') + ': ' + error.message;
+                    } finally {
+                        isUpdatingStatus.value = false;
+                    }
+                };
+                
+                // Initialize the page
+                onMounted(async () => {
+                    try {
+                        // Get outlet ID from URL
+                        const urlOutletId = getOutletIdFromUrl();
+                        
+                        if (!urlOutletId) {
+                            errorMessage.value = 'No outlet specified. Please include ?outlet=CODE in the URL.';
+                            isLoading.value = false;
+                            return;
+                        }
+                        
+                        outletId.value = urlOutletId;
+                        
+                        // Load outlet data
+                        const outletLoaded = await fetchOutletData(urlOutletId);
+                        
+                        if (!outletLoaded) {
+                            isLoading.value = false;
+                            return;
+                        }
+                        
+                        // Load order history
+                        await fetchOrderHistory();
+                        
+                        // Add a small delay before showing content to ensure smooth transition
+                        setTimeout(() => {
+                            isLoading.value = false;
+                            document.querySelector('.content-wrapper').classList.add('loaded');
+                            document.querySelector('.orders-container').classList.add('loaded');
+                        }, 300);
+                    } catch (error) {
+                        console.error('Error during initialization:', error);
+                        errorMessage.value = `Initialization error: ${error.message}`;
+                        isLoading.value = false;
+                    }
+                });
+                
+                // Watch for filter changes
+                watch([statusFilter], () => {
+                    applyFilters();
+                });
+                
+                return {
+                    isLoading,
+                    errorMessage,
+                    outletId,
+                    outletName,
+                    outletAddress,
+                    orders,
+                    filteredOrders,
+                    paginatedOrders,
+                    currentPage,
+                    totalPages,
+                    startDate,
+                    endDate,
+                    statusFilter,
+                    showOrderDetails,
+                    selectedOrder,
+                    formatDate,
+                    formatDateNoTime,
+                    formatCurrency,
+                    applyFilters,
+                    resetFilters,
+                    goToOrderPage,
+                    viewOrderDetails,
+                    closeOrderDetails,
+                    goToPage,
+                    goToPreviousPage,
+                    goToNextPage,
+                    currentLang,
+                    toggleLanguage,
+                    t,
+                    translateUnit,
+                    markAsDelivered,
+                    cancelOrder,
+                    isUpdatingStatus
+                };
+            }
+        }).mount('#app');
+    </script>
+    <style>
+        /* Add loading and transition styles */
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .content-wrapper {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .content-wrapper.loaded {
+            opacity: 1;
+        }
+
+        .orders-container {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .orders-container.loaded {
+            opacity: 1;
+        }
+
+        /* Status color styles */
+        .order-status.status-delivered {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .order-status.status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .order-status.status-processing {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+
+        .order-status.status-cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Custom action button styles */
+        .btn-delivered {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+        }
+        .btn-delivered:hover:not(:disabled) {
+            background-color: #218838;
+        }
+        .btn-cancel {
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+        }
+        .btn-cancel:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" v-if="isLoading">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD 
+                </div>
+            </div>
+        </header>
+
+        <button class="back-button" @click="goToOrderPage">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+            </svg>
+            {{ t('back') }}
+        </button>
+
+        <div class="history-container">
+            <!-- Outlet Info -->
+            <div class="outlet-info" v-if="outletName && outletAddress">
+                <div class="outlet-name">{{ outletName }}</div>
+                <div class="outlet-address">{{ outletAddress }}</div>
+            </div>
+            
+            <div class="history-title">
+                {{ t('orderHistory') }}
+            </div>
+            
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <div class="date-filter">
+                    <span class="filter-label">{{ t('dateRange') }}:</span>
+                    <input type="date" class="date-input" v-model="startDate" placeholder="Start Date">
+                    <span>-</span>
+                    <input type="date" class="date-input" v-model="endDate" placeholder="End Date">
+                </div>
+                
+                <div class="status-filter">
+                    <span class="filter-label">{{ t('status') }}:</span>
+                    <select class="status-select" v-model="statusFilter">
+                        <option value="all">All</option>
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                
+                <button class="filter-button" @click="applyFilters">
+                    {{ t('applyFilters') }}
+                </button>
+                <button class="filter-button" @click="resetFilters">
+                    {{ t('reset') }}
+                </button>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div v-if="isLoading" class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Loading order history...</p>
+            </div>
+            
+            <!-- Error Message -->
+            <div v-else-if="errorMessage" class="error-container">
+                <p>{{ errorMessage }}</p>
+                <button class="retry-button" @click="fetchOrderHistory">
+                    {{ t('retry') }}
+                </button>
+            </div>
+            
+            <!-- No Orders Message -->
+            <div v-else-if="filteredOrders.length === 0" class="no-orders">
+                <p>{{ t('noOrdersFound') }}</p>
+            </div>
+            
+            <!-- Order History List -->
+            <div v-else>
+                <div class="order-card" v-for="order in paginatedOrders" :key="order.id">
+                    <div class="order-header">
+                        <div>
+                            <div class="order-date">{{ order.formattedDate }}</div>
+                            <div class="order-id">
+                                <span v-if="order.orderNumber">Order #{{ order.orderNumber }}</span>
+                                <span v-else>Order #{{ order.id.substring(0, 8) }}</span>
+                            </div>
+                        </div>
+                        <div class="order-status" :class="'status-' + order.status">
+                            {{ order.status.charAt(0).toUpperCase() + order.status.slice(1) }}
+                        </div>
+                    </div>
+                    
+                    <div class="order-body">
+                        <div class="order-items">
+                            <div class="item-row" v-for="(item, index) in order.items.slice(0, 3)" :key="index">
+                                <div class="item-name">
+                                    {{ item.name }} 
+                                    <span v-if="item.chinese">({{ item.chinese }})</span>
+                                </div>
+                                <div class="item-qty">
+                                    {{ item.quantity }} <span v-if="item.unit && item.unitChinese">{{ item.unit }} ({{ item.unitChinese }})</span><span v-else-if="item.unit">{{ item.unit }}</span><span v-else-if="item.unitChinese">{{ item.unitChinese }}</span>
+                                </div>
+                                <div class="item-price">${{ formatCurrency(item.subtotal || (item.price * item.quantity)) }}</div>
+                            </div>
+                            
+                            <div v-if="order.items.length > 3" class="item-row">
+                                <div class="item-name">... {{ order.items.length - 3 }} more items</div>
+                                <div class="item-qty"></div>
+                                <div class="item-price"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="order-summary">
+                            <div class="item-row">
+                                <div>Total:</div>
+                                <div>${{ formatCurrency(order.grandTotal) }}</div>
+                            </div>
+                            <div v-if="order.deliveryDate" class="item-row">
+                                <div>{{ t('deliveryDate') }}:</div>
+                                <div>{{ formatDateNoTime(order.deliveryDate) }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="order-action-buttons" style="display: flex; gap: 10px;">
+                            <button class="order-details-button btn btn-secondary" @click="viewOrderDetails(order)">
+                                {{ t('viewDetails') }}
+                            </button>
+                            <button 
+                                v-if="order.status !== 'delivered' && order.status !== 'cancelled'" 
+                                class="order-details-button btn btn-delivered"
+                                @click="markAsDelivered(order)"
+                                :disabled="isUpdatingStatus"
+                            >
+                                {{ isUpdatingStatus ? t('updating') : t('markAsDelivered') }}
+                            </button>
+                            <button 
+                                v-if="order.status === 'pending'" 
+                                class="order-details-button btn btn-cancel"
+                                @click="cancelOrder(order)"
+                                :disabled="isUpdatingStatus"
+                            >
+                                {{ isUpdatingStatus ? t('updating') : t('cancelOrder') }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="pagination" v-if="totalPages > 1">
+                    <button class="page-button" @click="goToPreviousPage" :disabled="currentPage === 1">
+                        &laquo;
+                    </button>
+                    
+                    <button 
+                        v-for="page in totalPages" 
+                        :key="page" 
+                        class="page-button" 
+                        :class="{ active: page === currentPage }"
+                        @click="goToPage(page)"
+                    >
+                        {{ page }}
+                    </button>
+                    
+                    <button class="page-button" @click="goToNextPage" :disabled="currentPage === totalPages">
+                        &raquo;
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Details Modal -->
+        <div class="modal" :class="{ show: showOrderDetails }" @click="closeOrderDetails">
+            <div class="modal-content" @click.stop>
+                <span class="modal-close" @click="closeOrderDetails">&times;</span>
+                
+                <h2 class="modal-title">
+                    {{ t('orderDetails') }}
+                </h2>
+                
+                <div v-if="selectedOrder">
+                    <div class="order-info">
+                        <p><strong>{{ t('orderId') }}:</strong> {{ selectedOrder.id }}</p>
+                        <p v-if="selectedOrder.orderNumber"><strong>{{ t('orderNumber') }}:</strong> {{ selectedOrder.orderNumber }}</p>
+                        <p><strong>{{ t('date') }}:</strong> {{ selectedOrder.formattedDate }}</p>
+                        <p><strong>{{ t('status') }}:</strong> {{ selectedOrder.status }}</p>
+                        <p v-if="selectedOrder.deliveryDate"><strong>{{ t('deliveryDate') }}:</strong> {{ formatDateNoTime(selectedOrder.deliveryDate) }}</p>
+                        <p v-if="selectedOrder.referenceNumber"><strong>{{ t('referenceNumber') }}:</strong> {{ selectedOrder.referenceNumber }}</p>
+                        <p v-if="selectedOrder.remarks"><strong>{{ t('remarks') }}:</strong> {{ selectedOrder.remarks }}</p>
+                    </div>
+                    
+                    <div v-if="selectedOrder.status !== 'delivered'" class="action-section" style="margin: 15px 0; display: none;">
+                        <!-- Moved to outside the modal -->
+                    </div>
+                    
+                    <h3>{{ t('items') }}</h3>
+                    <div class="item-row" style="font-weight: bold;">
+                        <div class="item-name">{{ t('item') }}</div>
+                        <div class="item-qty">{{ t('quantity') }}</div>
+                        <div class="item-price">{{ t('price') }}</div>
+                    </div>
+                    
+                    <div class="item-row" v-for="(item, index) in selectedOrder.items" :key="index">
+                        <div class="item-name">
+                            {{ item.name }} 
+                            <span v-if="item.chinese">({{ item.chinese }})</span>
+                            <span v-if="item.UOM"> - {{ item.UOM }}</span>
+                        </div>
+                        <div class="item-qty">
+                            {{ item.quantity }} <span v-if="item.unit && item.unitChinese">{{ item.unit }} ({{ item.unitChinese }})</span><span v-else-if="item.unit">{{ item.unit }}</span><span v-else-if="item.unitChinese">{{ item.unitChinese }}</span>
+                        </div>
+                        <div class="item-price">${{ formatCurrency(item.subtotal || (item.price * item.quantity)) }}</div>
+                    </div>
+                    
+                    <div class="order-summary" style="margin-top: 20px;">
+                        <div class="item-row">
+                            <div>{{ t('subtotal') }}:</div>
+                            <div>${{ formatCurrency(selectedOrder.subTotal) }}</div>
+                        </div>
+                        <div class="item-row">
+                            <div>{{ t('gst') }}:</div>
+                            <div>${{ formatCurrency(selectedOrder.gst) }}</div>
+                        </div>
+                        <div class="item-row" style="font-weight: bold;">
+                            <div>{{ t('grandTotal') }}:</div>
+                            <div>${{ formatCurrency(selectedOrder.grandTotal) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

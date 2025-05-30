@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Existing head content remains the same -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHIAWASE (S) PTE LTD</title>
+    
+    <!-- Vue 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="order.css">
+    
+    <!-- Custom styles for custom item feature -->
+    <style>
+        .custom-item-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .custom-item-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+        
+        .custom-item-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .custom-item-input {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .custom-item-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        
+        .add-custom-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .add-custom-button:hover {
+            background: #0056b3;
+        }
+        
+        .add-custom-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .custom-items-list {
+            margin-top: 20px;
+        }
+        
+        .custom-item-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .custom-item-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .remove-custom-button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .remove-custom-button:hover {
+            background: #c82333;
+        }
+
+        /* Add new styles for the popup */
+        .custom-item-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-item-popup.active {
+            display: flex;
+        }
+
+        .custom-item-popup-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .custom-item-popup-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .custom-item-popup-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .custom-item-popup-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .custom-item-popup-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .custom-item-popup-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .custom-item-popup-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .custom-item-popup-button.cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .custom-item-popup-button.add {
+            background: #007bff;
+            color: white;
+        }
+
+        .custom-item-popup-button:hover {
+            opacity: 0.9;
+        }
+
+        .custom-item-popup-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .custom-item-form {
+                max-width: 100%;
+            }
+        }
+
+        /* Add loading and transition styles */
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .content-wrapper {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .content-wrapper.loaded {
+            opacity: 1;
+        }
+
+        .products-container {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .products-container.loaded {
+            opacity: 1;
+        }
+
+        /* Easter egg styles */
+        .easter-egg-photo {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            max-width: 80%;
+            max-height: 80vh;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .easter-egg-photo.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .easter-egg-photo img {
+            width: 100%;
+            height: 600px;
+            border-radius: 10px;
+        }
+    </style>
+    
+    <!-- Firebase v9 (modular) -->
+    <script type="module">
+        import { firebaseConfig } from './secrets.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            getDoc,
+            doc 
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const { createApp, ref, computed, onMounted, watch } = Vue;
+        createApp({
+            setup() {
+                const searchQuery = ref('');
+                const products = ref([]);
+                const isLoading = ref(true);
+                const errorMessage = ref('');
+                const subTotal = ref(0);
+                const gst = ref(0);
+                const grandTotal = ref(0);
+                const showEasterEgg = ref(false);
+                
+                // Watch for the Easter egg trigger
+                watch(searchQuery, (newValue) => {
+                    if (newValue.toLowerCase() === 'angybenny') {
+                        showEasterEgg.value = true;
+                    } else {
+                        showEasterEgg.value = false;
+                    }
+                });
+                
+                // Custom item functionality
+                const customItemName = ref('');
+                const customItems = ref([]);
+                const showCustomItemPopup = ref(false);
+                
+                // Outlet information
+                const outletId = ref('');
+                const outletName = ref('');
+                const outletAddress = ref('');
+                
+                // Image zoom modal
+                const showZoomModal = ref(false);
+                const zoomedImage = ref({
+                    src: '',
+                    alt: '',
+                    name: ''
+                });
+
+                // Unit translations
+                const unitTranslations = {
+                    '包': 'PACK',
+                    '盒': 'BOX',
+                    '桶': 'TUB',
+                    '件': 'PCS',
+                    '瓶': 'BOTTLE',
+                    '箱': 'CARTON',
+                    '袋': 'BAG'
+                };
+                
+                // Helper function to get unit translation
+                const getUnitTranslation = (unit) => {
+                    return unitTranslations[unit] || unit;
+                };
+
+                const roundToTwoDecimals = (value) => {
+                    return Math.round((value + Number.EPSILON) * 100) / 100;
+                };
+
+                const formatCurrency = (value) => {
+                    return roundToTwoDecimals(value).toFixed(2);
+                };
+                
+                // Custom item functions
+                const openCustomItemPopup = () => {
+                    customItemName.value = '';
+                    showCustomItemPopup.value = true;
+                };
+
+                const closeCustomItemPopup = () => {
+                    showCustomItemPopup.value = false;
+                    customItemName.value = '';
+                };
+
+                const addCustomItem = () => {
+                    const trimmedName = customItemName.value.trim();
+                    if (!trimmedName) {
+                        alert('Please enter a custom item name\n请输入自定义商品名称');
+                        return;
+                    }
+                    
+                    // Check if name contains Chinese characters
+                    if (/[\u4e00-\u9fff]/.test(trimmedName)) {
+                        alert('Please enter the item name in English only\n请仅使用英文输入商品名称');
+                        return;
+                    }
+                    
+                    // Check for duplicates
+                    const exists = customItems.value.some(item => 
+                        item.name.toLowerCase() === trimmedName.toLowerCase()
+                    );
+                    
+                    if (exists) {
+                        alert('This custom item already exists\n此自定义商品已存在');
+                        return;
+                    }
+                    
+                    // Add custom item
+                    customItems.value.push({
+                        id: `custom-${Date.now()}`,
+                        name: trimmedName,
+                        isCustom: true
+                    });
+                    
+                    // Close popup and clear input
+                    closeCustomItemPopup();
+                };
+                
+                const removeCustomItem = (itemId) => {
+                    customItems.value = customItems.value.filter(item => item.id !== itemId);
+                };
+                
+                const openZoomModal = (product) => {
+                    zoomedImage.value = {
+                        src: product.imageData || product.image || '/api/placeholder/400/350',
+                        alt: product.name,
+                        name: product.name
+                    };
+                    showZoomModal.value = true;
+                    document.body.style.overflow = 'hidden';
+                };
+
+                const closeZoomModal = () => {
+                    showZoomModal.value = false;
+                    document.body.style.overflow = '';
+                };
+
+                const handleModalClick = (event) => {
+                    if (event.target.classList.contains('zoom-modal')) {
+                        closeZoomModal();
+                    }
+                };
+                
+                // Get outlet ID from query parameter (e.g., ?outlet=ISF-CP)
+                const getOutletIdFromUrl = () => {
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const outlet = urlParams.get('outlet');
+                        console.log("Outlet from URL params:", outlet);
+                        return outlet || null; // Return null if no outlet in URL
+                    } catch (error) {
+                        console.error("Error getting outlet from URL:", error);
+                        return null;
+                    }
+                };
+                
+                // Function to fetch outlet data with enhanced error handling
+                const fetchOutletData = async (id) => {
+                    try {
+                        console.log('Fetching outlet data for ID:', id);
+                        
+                        if (!id) {
+                            console.error('Invalid outlet ID (null or empty)');
+                            errorMessage.value = 'No valid outlet ID provided';
+                            return false;
+                        }
+                        
+                        // First try to list all outlets to check what's available
+                        try {
+                            const outletsRef = collection(db, 'outlets');
+                            const outletsSnapshot = await getDocs(outletsRef);
+                            console.log('Available outlets count:', outletsSnapshot.size);
+                            
+                            const availableIds = [];
+                            outletsSnapshot.forEach(doc => {
+                                availableIds.push(doc.id);
+                                console.log(`Found outlet: ${doc.id} with data:`, doc.data());
+                            });
+                            
+                            console.log('Available outlet IDs:', availableIds);
+                            
+                            if (availableIds.length === 0) {
+                                console.error('No outlets found in the database');
+                                errorMessage.value = 'No outlets found in the database. Please contact support.';
+                                return false;
+                            }
+                            
+                            if (!availableIds.includes(id)) {
+                                console.error(`Requested outlet ID "${id}" not found in available outlets`);
+                                
+                                // If exact match not found, check for case insensitive match
+                                const matchingId = availableIds.find(availId => 
+                                    availId.toLowerCase() === id.toLowerCase()
+                                );
+                                
+                                if (matchingId) {
+                                    console.log(`Found case-insensitive match: ${matchingId}`);
+                                    // Use the matching ID with correct case
+                                    id = matchingId;
+                                } else {
+                                    // Suggest the first available outlet as fallback
+                                    errorMessage.value = `Outlet "${id}" not found. Available outlets: ${availableIds.join(', ')}`;
+                                    return false;
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error listing outlets:', error);
+                        }
+                        
+                        // Try to get the specific outlet
+                        const outletRef = doc(db, 'outlets', id);
+                        const outletDoc = await getDoc(outletRef);
+                        
+                        if (!outletDoc.exists()) {
+                            console.error('Outlet document does not exist:', id);
+                            errorMessage.value = `Outlet with ID "${id}" not found`;
+                            return false;
+                        }
+                        
+                        // Get the data
+                        const outletData = outletDoc.data();
+                        console.log('Outlet data retrieved:', outletData);
+                        
+                        // Check if name and address fields exist
+                        if (!outletData.hasOwnProperty('name')) {
+                            console.warn('Outlet data missing "name" field');
+                        }
+                        
+                        if (!outletData.hasOwnProperty('address')) {
+                            console.warn('Outlet data missing "address" field');
+                        }
+                        
+                        // Log all available fields
+                        console.log('Available fields in outlet data:', Object.keys(outletData));
+                        
+                        // Set the outlet information, with fallbacks
+                        outletName.value = outletData.name || id;
+                        outletAddress.value = outletData.address || 'No address available';
+                        
+                        console.log('Set outlet name to:', outletName.value);
+                        console.log('Set outlet address to:', outletAddress.value);
+                        return true;
+                    } catch (error) {
+                        console.error('Error fetching outlet data:', error);
+                        errorMessage.value = `Failed to load outlet information: ${error.message}`;
+                        return false;
+                    } finally {
+                        isLoading.value = false;
+                    }
+                };
+                
+                const loadProducts = async (id) => {
+                    try {
+                        isLoading.value = true;
+                        products.value = [];
+                        
+                        const productsCollectionPath = `outlets/${id}/products`;
+                        const productsRef = collection(db, productsCollectionPath);
+                        
+                        const snapshot = await getDocs(productsRef);
+                        
+                        if (snapshot.empty) {
+                            errorMessage.value = 'No products found for this outlet. Please contact customer service.';
+                            isLoading.value = false;
+                            return false;
+                        }
+                        
+                        products.value = snapshot.docs.map(doc => {
+                            const data = doc.data();
+                            console.log(`Product ${doc.id} data:`, data);
+                            
+                            // Check if imageData exists and log it
+                            if (data.imageData) {
+                                console.log(`Product ${doc.id} has imageData`);
+                            } else {
+                                console.log(`Product ${doc.id} doesn't have imageData`);
+                            }
+                            
+                            return {
+                                id: doc.id,
+                                ...data,
+                                orderQty: 0
+                            };
+                        });
+                        
+                        console.log('Loaded products:', products.value);
+                        isLoading.value = false;
+                        return true;
+                    } catch (error) {
+                        console.error('Error loading products:', error);
+                        errorMessage.value = `Failed to load products: ${error.message}`;
+                        isLoading.value = false;
+                        return false;
+                    }
+                };
+                
+                // Load the specific outlet
+                const loadOutlet = async (id) => {
+                    try {
+                        console.log('Starting loadOutlet for ID:', id);
+                        // Reset any error messages
+                        errorMessage.value = '';
+                        
+                        // Set the outlet ID
+                        outletId.value = id;
+                        console.log('Set outletId.value to:', outletId.value);
+                        
+                        // Load outlet data - using the exact ID as shown in Firebase
+                        console.log('Calling fetchOutletData...');
+                        const outletLoaded = await fetchOutletData(id);
+                        console.log('fetchOutletData result:', outletLoaded);
+                        
+                        if (!outletLoaded) {
+                            console.error('Failed to load outlet data');
+                            return false;
+                        }
+                        
+                        // Load products for this outlet
+                        console.log('Loading products for outlet:', id);
+                        const productsLoaded = await loadProducts(id);
+                        
+                        // Add a small delay before showing content to ensure smooth transition
+                        setTimeout(() => {
+                            isLoading.value = false;
+                            document.querySelector('.content-wrapper').classList.add('loaded');
+                            document.querySelector('.products-container').classList.add('loaded');
+                        }, 300);
+                        
+                        return productsLoaded;
+                    } catch (error) {
+                        console.error('Error in loadOutlet:', error);
+                        errorMessage.value = `Error loading outlet: ${error.message}`;
+                        isLoading.value = false;
+                        return false;
+                    }
+                };
+                
+                // Add retry function
+                const retryLoading = async () => {
+                    console.log('Retrying outlet loading...');
+                    errorMessage.value = '';
+                    isLoading.value = true;
+                    
+                    // Get the outlet ID from URL or use a default
+                    const urlOutletId = getOutletIdFromUrl();
+                    
+                    if (urlOutletId) {
+                        await loadOutlet(urlOutletId);
+                    } else {
+                        // Try to get the first available outlet as fallback
+                        try {
+                            const outletsRef = collection(db, 'outlets');
+                            const outletsSnapshot = await getDocs(outletsRef);
+                            
+                            if (!outletsSnapshot.empty) {
+                                const firstOutletId = outletsSnapshot.docs[0].id;
+                                console.log('No outlet ID in URL, using first available:', firstOutletId);
+                                await loadOutlet(firstOutletId);
+                            } else {
+                                errorMessage.value = 'No outlets available in the database.';
+                                isLoading.value = false;
+                            }
+                        } catch (error) {
+                            console.error('Error finding fallback outlet:', error);
+                            errorMessage.value = 'Error finding any outlets. Please contact support.';
+                            isLoading.value = false;
+                        }
+                    }
+                };
+
+                onMounted(async () => {
+                    try {
+                        // Check if outlet ID is specified in URL
+                        const urlOutletId = getOutletIdFromUrl();
+                        console.log('Outlet ID from URL:', urlOutletId);
+                        
+                        // If outlet is specified in URL
+                        if (urlOutletId) {
+                            console.log('Loading outlet with ID:', urlOutletId);
+                            const result = await loadOutlet(urlOutletId);
+                            console.log('Load outlet result:', result);
+                        } else {
+                            // No outlet specified in URL
+                            console.error('No outlet ID found in URL');
+                            errorMessage.value = 'No outlet specified. Please include ?outlet=CODE in the URL.';
+                            isLoading.value = false;
+                        }
+                    } catch (error) {
+                        console.error('Error during initialization:', error);
+                        errorMessage.value = `Initialization error: ${error.message}`;
+                        isLoading.value = false;
+                    }
+                });
+
+                const filteredProducts = computed(() => {
+                    if (!searchQuery.value) {
+                        return products.value;
+                    }
+                    const query = searchQuery.value.toLowerCase();
+                    return products.value.filter(product => 
+                        (product.name && product.name.toLowerCase().includes(query)) || 
+                        (product.cname && product.cname.toLowerCase().includes(query)) ||
+                        (product.id && product.id.toLowerCase().includes(query))
+                    );
+                });
+
+                const updateTotals = () => {
+                    subTotal.value = products.value.reduce((total, product) => {
+                        const price = parseFloat(product.price) || 0;
+                        return total + (price * (product.orderQty || 0));
+                    }, 0);
+                    
+                    gst.value = roundToTwoDecimals(subTotal.value * 0.09);
+                    grandTotal.value = roundToTwoDecimals(subTotal.value + gst.value);
+                };
+
+                const submitOrder = async () => {
+                    const orderedItems = products.value.filter(p => p.orderQty > 0);
+                    
+                    // Check if there are any ordered items or custom items
+                    if (orderedItems.length === 0 && customItems.value.length === 0) {
+                        alert('Please add at least one item to your order \n 请至少添加一件商品到您的订单 ');
+                        return;
+                    }
+                    
+                    try {
+                        const orderData = {
+                            outletId: outletId.value,
+                            outletName: outletName.value,
+                            outletAddress: outletAddress.value,
+                            items: orderedItems.map(item => ({
+                                id: item.id,
+                                name: item.name,
+                                chinese: item.cname,
+                                price: parseFloat(item.price || 0),
+                                unit: item.unit,
+                                unitChinese: getUnitTranslation(item.unit),
+                                UOM: item.UOM,
+                                quantity: item.orderQty,
+                                subtotal: roundToTwoDecimals(parseFloat(item.price || 0) * item.orderQty),
+                                image: item.imageData || item.image
+                            })),
+                            customItems: customItems.value.map(item => ({
+                                id: item.id,
+                                name: item.name,
+                                isCustom: true
+                            })),
+                            subTotal: subTotal.value,
+                            gst: gst.value,
+                            grandTotal: grandTotal.value,
+                            referringPage: `order.html?outlet=${outletId.value}` // Store the current page path with outlet ID
+                        };
+                        
+                        localStorage.setItem('orderPreview', JSON.stringify(orderData));
+                        
+                        window.location.href = 'preview.html';
+                    } catch (error) {
+                        console.error('Error preparing order:', error);
+                        alert('There was an error preparing your order. Please try again.');
+                    }
+                };
+                
+                // Navigate to history page
+                const goToHistory = () => {
+                    window.location.href = `history.html?outlet=${outletId.value}`;
+                };
+
+                return {
+                    searchQuery,
+                    products,
+                    filteredProducts,
+                    isLoading,
+                    errorMessage,
+                    subTotal,
+                    gst,
+                    grandTotal,
+                    outletId,
+                    outletName,
+                    outletAddress,
+                    updateTotals,
+                    submitOrder,
+                    formatCurrency,
+                    showZoomModal,
+                    zoomedImage,
+                    openZoomModal,
+                    closeZoomModal,
+                    handleModalClick,
+                    getUnitTranslation,
+                    retryLoading,
+                    goToHistory,
+                    // Custom item functions
+                    customItemName,
+                    customItems,
+                    addCustomItem,
+                    removeCustomItem,
+                    showCustomItemPopup,
+                    openCustomItemPopup,
+                    closeCustomItemPopup,
+                    // Easter egg
+                    showEasterEgg
+                };
+            }
+        }).mount('#app');
+    </script>
+</head>
+<body>
+    <div id="app">
+        <!-- Easter Egg Photo -->
+        <div class="easter-egg-photo" :class="{ active: showEasterEgg }">
+            <img src="logo2.jpeg" alt="Easter Egg" @click="showEasterEgg = false">
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" v-if="isLoading">
+            <div class="loading-spinner"></div>
+        </div>
+
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD 
+                </div>
+                <!-- Outlet selector removed as requested -->
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            <div class="search-container">
+                <input type="text" class="search-input" placeholder="搜索产品 (Search Products)" v-model="searchQuery">
+                <button class="search-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Updated Outlet Info Section with Fallback Mechanism -->
+            <div class="outlet-info" v-if="outletName && outletAddress">
+                <div class="outlet-name">{{ outletName }}</div>
+                <div class="outlet-address">{{ outletAddress }}</div>
+            </div>
+            <div class="outlet-info" v-else-if="isLoading">
+                <div class="loading-spinner"></div>
+                <div>Loading outlet information...</div>
+            </div>
+            <div class="outlet-info error" v-else-if="errorMessage">
+                <div>{{ errorMessage }}</div>
+                <div v-if="outletId">Attempted to load outlet: {{ outletId }}</div>
+                <button class="retry-button" @click="retryLoading">Retry Loading</button>
+            </div>
+            <div class="outlet-info error" v-else>
+                <div>Unable to load outlet information</div>
+                <button class="retry-button" @click="retryLoading">Retry Loading</button>
+            </div>
+
+            <!-- Custom Item Section -->
+            <div class="custom-item-section" v-if="!isLoading && !errorMessage">
+                <button class="add-custom-button" @click="openCustomItemPopup">
+                    添加自定义商品 (Add Custom Item)
+                </button>
+            </div>
+
+            <!-- Custom Items List -->
+            <div class="custom-items-list" v-if="customItems.length > 0">
+                <div class="custom-item-card" v-for="item in customItems" :key="item.id">
+                    <div class="custom-item-name">{{ item.name }}</div>
+                    <button class="remove-custom-button" @click="removeCustomItem(item.id)">
+                        删除 (Remove)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom Item Popup -->
+            <div class="custom-item-popup" :class="{ active: showCustomItemPopup }">
+                <div class="custom-item-popup-content">
+                    <div class="custom-item-popup-close" @click="closeCustomItemPopup">×</div>
+                    <div class="custom-item-popup-title">
+                        添加自定义商品 (Add Custom Item)
+                    </div>
+                    <input 
+                        type="text" 
+                        class="custom-item-popup-input" 
+                        placeholder="Enter custom item name in English (输入英文商品名称)"
+                        v-model="customItemName"
+                        @keyup.enter="addCustomItem"
+                    >
+                    <div class="custom-item-popup-buttons">
+                        <button 
+                            class="custom-item-popup-button cancel" 
+                            @click="closeCustomItemPopup"
+                        >
+                            取消 (Cancel)
+                        </button>
+                        <button 
+                            class="custom-item-popup-button add" 
+                            @click="addCustomItem"
+                            :disabled="!customItemName.trim()"
+                        >
+                            添加 (Add)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Zoom Modal -->
+            <div v-if="showZoomModal" class="zoom-modal" @click="handleModalClick">
+                <div class="zoom-modal-content">
+                    <div class="zoom-modal-close" @click="closeZoomModal">×</div>
+                    <img :src="zoomedImage.src" :alt="zoomedImage.alt" class="zoom-modal-image">
+                </div>
+                <div class="zoom-modal-title">{{ zoomedImage.name }}</div>
+            </div>
+
+            <div class="products-container">
+                <!-- Loading indicator -->
+                <div v-if="isLoading" class="loading-container">
+                    <p>Loading products...</p>
+                </div>
+                
+                <!-- Error message -->
+                <div v-else-if="errorMessage" class="error-container">
+                    <p>{{ errorMessage }}</p>
+                    <p>Please make sure the outlet code in the URL is correct.</p>
+                </div>
+                
+                <!-- Product cards -->
+                <div v-else class="product-card" v-for="product in filteredProducts" :key="product.id">
+                    <div class="product-image-container" @click="openZoomModal(product)">
+                        <img :src="product.imageData || product.image || '/api/placeholder/200/150'" :alt="product.name" class="product-image">
+                        <div class="zoom-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V7h-.5a.5.5 0 0 1-.5-.5z"/>
+                                <path d="M3.5 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1H4v.5a.5.5 0 0 1-1 0v-1z"/>
+                                <path d="M11 3.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V4h-.5a.5.5 0 0 1-.5-.5z"/>
+                                <path d="M3.5 3.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1H4v.5a.5.5 0 0 1-1 0v-1z"/>
+                                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H4z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="product-details">
+                        <div class="product-name">{{ product.name }}</div>
+                        <div class="product-chinese">{{ product.cname }}</div>
+                        <div v-if="product.UOM" class="product-price">${{ formatCurrency(parseFloat(product.price || 0)) }} 每{{ product.unit }} <span class="unit-english">(per {{  getUnitTranslation(product.unit) }})</span> ({{product.UOM}})</div>
+                        <div v-else class="product-price">${{ formatCurrency(parseFloat(product.price || 0)) }} 每{{ product.unit }} <span class="unit-english">(per {{ getUnitTranslation(product.unit) }})</span></div>
+                        <div class="order-qty">
+                            <span>订购数量 (Order Qty):</span>
+                            <input 
+                                type="number" 
+                                class="qty-input" 
+                                v-model.number="product.orderQty" 
+                                min="0" 
+                                @change="updateTotals"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="order-summary" v-if="!isLoading && !errorMessage">
+                <div class="summary-row">
+                    <span>小计 (Sub-Total):</span>
+                    <span>$ {{ formatCurrency(subTotal) }}</span>
+                </div>
+                <div class="summary-row">
+                    <span>消费税 (GST) 9%:</span>
+                    <span>$ {{ formatCurrency(gst) }}</span>
+                </div>
+                <div class="summary-row grand-total">
+                    <span>总计金额 (Grand Total):</span>
+                    <span>$ {{ formatCurrency(grandTotal) }}</span>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <p>Click on the Order Qty field box and enter the quantity to order a product.</p>
+                <p>Use the "Add Custom Item" section above to add any special items not in the product list.</p>
+                <p>Click on any product image to see a larger view.</p>
+                <p>Click "Preview" to preview the ordered items before submission.</p>
+                <p>Click "History" to view past orders for this outlet.</p>
+                <p>Order cut-off timing: 10:00 PM. Orders submitted after 10:00 PM will be processed on the following day. The delivery date will be delayed by another day.</p>
+                
+                <div class="language-section">
+                    <p>点击"订购数量"框，输入订购产品的数量。</p>
+                    <p>使用上面的"添加自定义商品"部分添加产品列表中没有的特殊商品。</p>
+                    <p>点击任何产品图片查看大图。</p>
+                    <p>在提交订单之前，点击"预览"以预览订购的商品。</p>
+                    <p>点击"历史"查看该店铺的历史订单。</p>
+                    <p>订单截止时间：晚上10点。晚上10点之后提交的订单将在第二天被处理。交货日期则将推迟一天.</p>
+                </div>
+                
+                <div class="language-section">
+                    <p>Klik pada kotak pesanan "Order Qty" dan masukkan kuantiti diperlu untuk memesan produk.</p>
+                    <p>Gunakan bahagian "Add Custom Item" di atas untuk menambah item khas yang tidak ada dalam senarai produk.</p>
+                    <p>Klik pada mana-mana gambar produk untuk melihat paparan yang lebih besar.</p>
+                    <p>Klik "Preview" untuk melihat item yang dipesan sebelum dihantar.</p>
+                    <p>Klik "History" untuk melihat pesanan yang lalu untuk outlet ini.</p>
+                    <p>Waktu pemutusan pesanan: 10:00 PM. Pesanan yang dihantar selepas jam 10:00 malam akan diproses pada hari berikutnya. Tarikh penghantaran akan ditangguhkan pada hari yang selepasnya.</p>
+                </div>
+            </div>
+            
+            <div class="page-bottom-padding"></div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="action-button" @click="goToHistory">历史 (History)</button>
+            <button class="action-button" @click="submitOrder">预览 (Preview)</button>
+        </div>
+    </div>
+</body>
+</html>

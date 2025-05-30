@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHIAWASE (S) PTE LTD - Admin Portal</title>
+    <style>
+        /* Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.5;
+            height: 100vh;
+        }
+        
+        /* Header */
+        header {
+            background-color: #1a3c6e;
+            color: white;
+            padding: 10px 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .logo img {
+            margin-right: 10px;
+            height: 50px;
+        }
+        
+        .language-toggle {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .language-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .header-user {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        
+        .user-info svg {
+            margin-right: 5px;
+        }
+        
+        .logout-btn {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        
+        .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1, h2 {
+            color: #1a3c6e;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .english-subtext {
+            font-size: 0.7em;
+            opacity: 0.7;
+            margin-left: 10px;
+            font-weight: normal;
+        }
+        
+        /* Card */
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        /* Login Form */
+        .login-container {
+            max-width: 400px;
+            margin: 80px auto;
+        }
+        
+        .login-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-logo img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+        
+        .login-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .form-control:focus {
+            border-color: #1a3c6e;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(26, 60, 110, 0.25);
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background-color: #1a3c6e;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #15325c;
+        }
+        
+        .btn-secondary {
+            background-color: #e2e6ea;
+            color: #212529;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #dae0e5;
+        }
+        
+        /* Error Message */
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        /* Dashboard Styles */
+        .dashboard-container {
+            padding: 40px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .welcome-message {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+        }
+        
+        .menu-item {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .menu-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .menu-icon {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #1a3c6e;
+            color: white;
+        }
+        
+        .menu-icon svg {
+            width: 50px;
+            height: 50px;
+        }
+        
+        .menu-content {
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .menu-title {
+            font-size: 1.25rem;
+            margin-bottom: 10px;
+            color: #1a3c6e;
+        }
+        
+        .menu-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        /* Authentication check loading */
+        .app-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #f5f5f5;
+            z-index: 1000;
+        }
+        
+        .app-loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(26, 60, 110, 0.2);
+            border-radius: 50%;
+            border-top-color: #1a3c6e;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        
+        .app-loading-text {
+            color: #1a3c6e;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Pages are hidden by default */
+        .page {
+            display: none;
+        }
+        
+        /* Active page is displayed */
+        .page.active {
+            display: block;
+        }
+        
+        /* Hide all content until authentication is checked */
+        #app {
+            visibility: hidden;
+        }
+        
+        #app.loaded {
+            visibility: visible;
+        }
+    </style>
+    <!-- Vue 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+</head>
+<body>
+    <!-- Initial loading screen (outside of Vue app) -->
+    <div id="initial-loading" class="app-loading">
+        <div class="app-loading-spinner"></div>
+        <div class="app-loading-text">Loading...</div>
+    </div>
+    
+    <div id="app">
+        <!-- Login page -->
+        <div class="page" :class="{ 'active': currentPage === 'login' }">
+            <div class="login-container">
+                <div class="login-logo">
+                    <img src="logo.png" alt="Logo">
+                </div>
+                <h1 class="login-title">{{ t('adminPortal') }} <span class="english-subtext" v-if="currentLang === 'zh'">Admin Portal</span></h1>
+                
+                <div class="card">
+                    <div v-if="loginError" class="error-message">
+                        {{ loginError }}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">{{ t('email') }}</label>
+                        <input type="email" id="email" class="form-control" v-model="email" :placeholder="t('enterEmail')" @keyup.enter="login">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">{{ t('password') }}</label>
+                        <input type="password" id="password" class="form-control" v-model="password" :placeholder="t('enterPassword')" @keyup.enter="login">
+                    </div>
+                    
+                    <button class="btn btn-primary btn-block" @click="login" :disabled="isLoggingIn">
+                        <span v-if="isLoggingIn" class="loading"></span>
+                        {{ isLoggingIn ? t('loggingIn') : t('login') }}
+                    </button>
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="language-toggle" @click="toggleLanguage">
+                        {{ currentLang === 'zh' ? 'English' : '中文' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard page -->
+        <div class="page" :class="{ 'active': currentPage === 'dashboard' }">
+            <header>
+                <div class="header-content">
+                    <div class="logo">
+                        <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
+                    </div>
+                    <div class="header-user">
+                        <div class="user-info">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                            </svg>
+                            {{ userEmail }}
+                        </div>
+                        <button class="logout-btn" @click="logout">
+                            {{ t('logout') }}
+                        </button>
+                        <button class="language-toggle" @click="toggleLanguage">
+                            {{ currentLang === 'zh' ? 'English' : '中文' }}
+                        </button>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="dashboard-container">
+                <div class="welcome-message">
+                    <h1>{{ t('welcomeAdmin') }} <span class="english-subtext" v-if="currentLang === 'zh'">Welcome to the Admin Portal</span></h1>
+                    <p>{{ t('selectModule') }}</p>
+                </div>
+                
+                <div class="menu-grid">
+                    <!-- Order Management -->
+                    <a href="#" class="menu-item" @click.prevent="goToPage('orders')">
+                        <div class="menu-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
+                                <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-content">
+                            <h3 class="menu-title">{{ t('orderManagement') }}</h3>
+                            <p class="menu-description">{{ t('orderManagementDesc') }}</p>
+                            <span class="btn btn-primary">{{ t('enter') }}</span>
+                        </div>
+                    </a>
+                    
+                    <!-- Product Management -->
+                    <a href="#" class="menu-item" @click.prevent="goToPage('products')">
+                        <div class="menu-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-content">
+                            <h3 class="menu-title">{{ t('productManagement') }}</h3>
+                            <p class="menu-description">{{ t('productManagementDesc') }}</p>
+                            <span class="btn btn-primary">{{ t('enter') }}</span>
+                        </div>
+                    </a>
+                    
+                    <!-- Outlet Management -->
+                    <a href="#" class="menu-item" @click.prevent="goToPage('outlets')">
+                        <div class="menu-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M12.166 8.94c-.524 1.062-1.234 2.12-1.96 3.07A31.493 31.493 0 0 1 8 14.58a31.481 31.481 0 0 1-2.206-2.57c-.726-.95-1.436-2.008-1.96-3.07C3.304 7.867 3 6.862 3 6a5 5 0 0 1 10 0c0 .862-.305 1.867-.834 2.94zM8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10z"/>
+                                <path d="M8 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-content">
+                            <h3 class="menu-title">{{ t('outletManagement') }}</h3>
+                            <p class="menu-description">{{ t('outletManagementDesc') }}</p>
+                            <span class="btn btn-primary">{{ t('enter') }}</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase libraries -->
+    <script type="module">
+        import { firebaseConfig } from './secrets.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { 
+            getAuth,
+            signInWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Create Vue app
+        const { createApp, ref, onMounted } = Vue;
+        createApp({
+            setup() {
+                // Page navigation
+                const currentPage = ref('login');
+                
+                // Language settings
+                const languages = {
+                    zh: '中文',
+                    en: 'English'
+                };
+                
+                const currentLang = ref('zh'); // Default to Chinese
+                
+                // Translations
+                const translations = {
+                    adminPortal: {
+                        zh: '管理员门户',
+                        en: 'Admin Portal'
+                    },
+                    email: {
+                        zh: '电子邮件:',
+                        en: 'Email:'
+                    },
+                    password: {
+                        zh: '密码:',
+                        en: 'Password:'
+                    },
+                    enterEmail: {
+                        zh: '输入电子邮件地址',
+                        en: 'Enter your email'
+                    },
+                    enterPassword: {
+                        zh: '输入密码',
+                        en: 'Enter your password'
+                    },
+                    login: {
+                        zh: '登录',
+                        en: 'Login'
+                    },
+                    loggingIn: {
+                        zh: '登录中...',
+                        en: 'Logging in...'
+                    },
+                    loginError: {
+                        zh: '登录失败: 请检查您的电子邮件和密码',
+                        en: 'Login failed: Please check your email and password'
+                    },
+                    welcomeAdmin: {
+                        zh: '欢迎来到管理员门户',
+                        en: 'Welcome to the Admin Portal'
+                    },
+                    selectModule: {
+                        zh: '请选择您要管理的模块',
+                        en: 'Please select a module to manage'
+                    },
+                    orderManagement: {
+                        zh: '订单管理',
+                        en: 'Order Management'
+                    },
+                    orderManagementDesc: {
+                        zh: '查看和处理客户订单',
+                        en: 'View and process customer orders'
+                    },
+                    productManagement: {
+                        zh: '产品管理',
+                        en: 'Product Management'
+                    },
+                    productManagementDesc: {
+                        zh: '管理产品目录和价格',
+                        en: 'Manage product catalog and pricing'
+                    },
+                    outletManagement: {
+                        zh: '门店管理',
+                        en: 'Outlet Management'
+                    },
+                    outletManagementDesc: {
+                        zh: '管理门店信息和设置',
+                        en: 'Manage outlet information and settings'
+                    },
+                    enter: {
+                        zh: '进入',
+                        en: 'Enter'
+                    },
+                    logout: {
+                        zh: '退出登录',
+                        en: 'Logout'
+                    }
+                };
+                
+                // Function to get translation
+                const t = (key) => {
+                    return translations[key]?.[currentLang.value] || key;
+                };
+                
+                // Auth state
+                const isLoggingIn = ref(false);
+                const loginError = ref('');
+                const userEmail = ref('');
+                
+                // Form data
+                const email = ref('');
+                const password = ref('');
+                
+                // Login function
+                const login = async () => {
+                    if (!email.value || !password.value) {
+                        loginError.value = t('loginError');
+                        return;
+                    }
+                    
+                    isLoggingIn.value = true;
+                    loginError.value = '';
+                    
+                    try {
+                        const userCredential = await signInWithEmailAndPassword(auth, email.value, password.value);
+                        userEmail.value = userCredential.user.email;
+                        currentPage.value = 'dashboard';
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        loginError.value = t('loginError');
+                    } finally {
+                        isLoggingIn.value = false;
+                    }
+                };
+                
+                // Logout function
+                const logout = async () => {
+                    try {
+                        await signOut(auth);
+                        currentPage.value = 'login';
+                        email.value = '';
+                        password.value = '';
+                    } catch (error) {
+                        console.error('Logout error:', error);
+                    }
+                };
+                
+                // Navigation function
+                const goToPage = (page) => {
+                    // Handle navigation based on the selected module
+                    if (page === 'products') {
+                        window.location.href = 'product.html';
+                    } else if (page === 'orders') {
+                        window.location.href = 'order_management.html';
+                    } else if (page === 'outlets') {
+                        window.location.href = 'outlet_management.html';
+                    }
+                };
+                
+                // Check authentication state on load
+                onMounted(() => {
+                    // Load saved language preference
+                    const savedLang = localStorage.getItem('preferred_language');
+                    if (savedLang && (savedLang === 'zh' || savedLang === 'en')) {
+                        currentLang.value = savedLang;
+                    }
+                    
+                    // Check authentication state
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            // User is signed in
+                            userEmail.value = user.email;
+                            currentPage.value = 'dashboard';
+                        } else {
+                            // User is signed out
+                            currentPage.value = 'login';
+                        }
+                        
+                        // Show app and hide loading screen
+                        document.getElementById('app').classList.add('loaded');
+                        document.getElementById('initial-loading').style.display = 'none';
+                    });
+                });
+                
+                // Toggle language
+                const toggleLanguage = () => {
+                    currentLang.value = currentLang.value === 'zh' ? 'en' : 'zh';
+                    localStorage.setItem('preferred_language', currentLang.value);
+                };
+                
+                return {
+                    currentPage,
+                    currentLang,
+                    t,
+                    isLoggingIn,
+                    loginError,
+                    email,
+                    password,
+                    userEmail,
+                    login,
+                    logout,
+                    goToPage,
+                    toggleLanguage
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

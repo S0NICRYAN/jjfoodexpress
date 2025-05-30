@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>门店管理系统 - SHIAWASE (S) PTE LTD</title>
+    <link rel="stylesheet" href="product.css">
+    <!-- Vue 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+</head>
+<body>
+    <!-- Initial loading screen (outside of Vue app) -->
+    <div id="initial-loading" class="app-loading">
+        <div class="app-loading-spinner"></div>
+        <div class="app-loading-text">Loading...</div>
+    </div>
+
+    <div id="app">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
+                </div>
+                <div class="header-actions">
+                    <div v-if="isAuthenticated" class="user-info">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                        </svg>
+                        {{ userEmail }}
+                    </div>
+                    <button class="back-btn" @click="goBack">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                        </svg>
+                        {{ t('back') || 'Back' }}
+                    </button>
+                    <button class="language-toggle" @click="toggleLanguage">
+                        {{ currentLang === 'zh' ? 'English' : '中文' }}
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <div class="container">
+            <!-- Auth loading state -->
+            <div v-if="isCheckingAuth" class="auth-loading">
+                <div class="loading-spinner"></div>
+                <p>{{ t('checkingAuth') || 'Checking authentication...' }}</p>
+            </div>
+            
+            <!-- Content is visible only when authenticated -->
+            <div v-else-if="isAuthenticated">
+                <h1>{{ t('appTitle') }} <span class="english-subtext" v-if="currentLang === 'zh'">Outlet Management</span></h1>
+                
+                <!-- Message display -->
+                <div v-if="message.text" :class="['message', message.type === 'success' ? 'message-success' : 'message-error']">
+                    {{ message.text }}
+                </div>
+                
+                <!-- Add Outlet Form -->
+                <h2 id="outlet-form">{{ isEditing ? t('editOutlet') : t('addNewOutlet') }}
+                    <span class="english-subtext" v-if="currentLang === 'zh'">{{ isEditing ? 'Edit Outlet' : 'Add New Outlet' }}</span>
+                </h2>
+                <div class="card">
+                    <div class="form-row">
+                        <div class="form-group-flex">
+                            <label for="outletCode">{{ t('outletCode') }} <span class="english-subtext" v-if="currentLang === 'zh'">Outlet Code:</span></label>
+                            <input type="text" id="outletCode" class="form-control" v-model="outletCode" :placeholder="t('enterOutletCode')" :disabled="isEditing">
+                        </div>
+                        
+                        <div class="form-group-flex">
+                            <label for="outletName">{{ t('outletName') }} <span class="english-subtext" v-if="currentLang === 'zh'">Outlet Name:</span></label>
+                            <input type="text" id="outletName" class="form-control" v-model="outletName" :placeholder="t('enterOutletName')">
+                        </div>
+                    </div>
+                    <br>
+                    
+                    <div class="form-group">
+                        <label for="outletAddress">{{ t('outletAddress') }} <span class="english-subtext" v-if="currentLang === 'zh'">Outlet Address:</span></label>
+                        <textarea id="outletAddress" class="form-control" v-model="outletAddress" :placeholder="t('enterOutletAddress')" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="btn btn-primary" @click="submitForm" :disabled="isSubmitting">
+                            {{ isSubmitting ? t('saving') : (isEditing ? t('updateOutlet') : t('addOutlet')) }}
+                        </button>
+                        <button v-if="isEditing" class="btn btn-secondary" @click="resetForm">{{ t('cancelEditing') }}</button>
+                    </div>
+                </div>
+                
+                <!-- Outlet List -->
+                <h2>{{ t('outletList') }} <span class="english-subtext" v-if="currentLang === 'zh'">Outlet List</span></h2>
+                <div class="card">
+                    <div class="search-container">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label for="search">{{ t('search') }}</label>
+                                <input id="search" type="text" class="search-input" v-model="searchQuery" :placeholder="t('searchOutlets')">
+                            </div>
+                            <div class="filter-group filter-dropdown">
+                                <label for="prefixFilter">{{ t('filterByPrefix') }}</label>
+                                <select id="prefixFilter" class="form-control" v-model="prefixFilter">
+                                    <option value="all">{{ t('allPrefixes') }}</option>
+                                    <option v-for="prefix in availablePrefixes" :key="prefix" :value="prefix">
+                                        {{ prefix }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="isLoading" class="loading">{{ t('loadingOutlets') }}</div>
+                    
+                    <div v-else-if="outlets.length === 0" class="empty-state">
+                        {{ t('noOutletsFound') }}
+                    </div>
+                    
+                    <table v-else class="product-table">
+                        <thead>
+                            <tr>
+                                <th>{{ t('outletCode') }}</th>
+                                <th>{{ t('outletName') }}</th>
+                                <th>{{ t('outletAddress') }}</th>
+                                <th>{{ t('actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-for="(outlet, index) in filteredOutlets" :key="outlet.id">
+                                <!-- Header row -->
+                                <tr v-if="outlet.isHeader" class="cuisine-header">
+                                    <td colspan="4" class="cuisine-header-cell">{{ outlet.name }}</td>
+                                </tr>
+                                <!-- Regular outlet row -->
+                                <tr v-else>
+                                    <td>{{ outlet.id }}</td>
+                                    <td>{{ outlet.name }}</td>
+                                    <td>{{ outlet.address }}</td>
+                                    <td>
+                                        <div class="table-actions">
+                                            <button class="btn btn-secondary" @click="editOutlet(outlet)">{{ t('edit') }}</button>
+                                            <button class="btn btn-danger" @click="deleteOutlet(outlet)">{{ t('delete') }}</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Not authenticated message -->
+            <div v-else class="auth-error">
+                <h2>{{ t('notAuthorized') || 'Not Authorized' }}</h2>
+                <p>{{ t('redirectingToLogin') || 'You are not authorized to access this page. Redirecting to home...' }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase v9 (modular) -->
+    <script type="module">
+        import { firebaseConfig } from './secrets.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            getDoc, 
+            getDocs, 
+            setDoc, 
+            updateDoc, 
+            deleteDoc, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { 
+            getAuth,
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Create Vue app
+        const { createApp, ref, onMounted, computed, watch } = Vue;
+        createApp({
+            setup() {
+                // Authentication states
+                const isAuthenticated = ref(false);
+                const isCheckingAuth = ref(true);
+                const userEmail = ref('');
+                
+                // Check authentication - simplified version
+                const checkAuthStatus = (user) => {
+                    if (user) {
+                        // User is signed in - we trust they're authorized
+                        isAuthenticated.value = true;
+                        userEmail.value = user.email;
+                    } else {
+                        // No user is signed in
+                        isAuthenticated.value = false;
+                        // Redirect to login page
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                    }
+                    isCheckingAuth.value = false;
+                };
+                
+                // Back button function
+                const goBack = () => {
+                    window.location.href = 'index.html';
+                };
+                
+                // Language settings
+                const languages = {
+                    zh: '中文',
+                    en: 'English'
+                };
+                
+                const currentLang = ref('zh'); // Default to Chinese
+                
+                // Translations
+                const translations = {
+                    appTitle: {
+                        zh: '门店管理系统',
+                        en: 'Outlet Management'
+                    },
+                    addNewOutlet: {
+                        zh: '添加新门店',
+                        en: 'Add New Outlet'
+                    },
+                    editOutlet: {
+                        zh: '编辑门店',
+                        en: 'Edit Outlet'
+                    },
+                    outletCode: {
+                        zh: '门店代码:',
+                        en: 'Outlet Code:'
+                    },
+                    outletName: {
+                        zh: '门店名称:',
+                        en: 'Outlet Name:'
+                    },
+                    outletAddress: {
+                        zh: '门店地址:',
+                        en: 'Outlet Address:'
+                    },
+                    enterOutletCode: {
+                        zh: '输入门店代码',
+                        en: 'Enter outlet code'
+                    },
+                    enterOutletName: {
+                        zh: '输入门店名称',
+                        en: 'Enter outlet name'
+                    },
+                    enterOutletAddress: {
+                        zh: '输入门店地址',
+                        en: 'Enter outlet address'
+                    },
+                    filterByPrefix: {
+                        zh: '按前缀筛选:',
+                        en: 'Filter by Prefix:'
+                    },
+                    search: {
+                        zh: '搜索',
+                        en: 'Search:'
+                    },
+                    allPrefixes: {
+                        zh: '所有前缀',
+                        en: 'All Prefixes'
+                    },
+                    saving: {
+                        zh: '保存中...',
+                        en: 'Saving...'
+                    },
+                    updateOutlet: {
+                        zh: '更新门店',
+                        en: 'Update Outlet'
+                    },
+                    addOutlet: {
+                        zh: '添加门店',
+                        en: 'Add Outlet'
+                    },
+                    cancelEditing: {
+                        zh: '取消编辑',
+                        en: 'Cancel Editing'
+                    },
+                    outletList: {
+                        zh: '门店列表',
+                        en: 'Outlet List'
+                    },
+                    searchOutlets: {
+                        zh: '搜索门店...',
+                        en: 'Search outlets...'
+                    },
+                    loadingOutlets: {
+                        zh: '加载门店中...',
+                        en: 'Loading outlets...'
+                    },
+                    noOutletsFound: {
+                        zh: '未找到门店。',
+                        en: 'No outlets found.'
+                    },
+                    actions: {
+                        zh: '操作',
+                        en: 'Actions'
+                    },
+                    edit: {
+                        zh: '编辑',
+                        en: 'Edit'
+                    },
+                    delete: {
+                        zh: '删除',
+                        en: 'Delete'
+                    },
+                    deleteConfirm: {
+                        zh: '您确定要删除 "{0}" 吗？',
+                        en: 'Are you sure you want to delete "{0}"?'
+                    },
+                    successDelete: {
+                        zh: '门店 "{0}" 已被删除。',
+                        en: 'Outlet "{0}" has been deleted.'
+                    },
+                    failedDelete: {
+                        zh: '删除门店失败: {0}',
+                        en: 'Failed to delete outlet: {0}'
+                    },
+                    successUpdate: {
+                        zh: '门店 "{0}" 已更新。',
+                        en: 'Outlet "{0}" has been updated.'
+                    },
+                    successAdd: {
+                        zh: '门店 "{0}" 已添加。',
+                        en: 'Outlet "{0}" has been added.'
+                    },
+                    failedSave: {
+                        zh: '保存门店失败: {0}',
+                        en: 'Failed to save outlet: {0}'
+                    },
+                    errorOutletCode: {
+                        zh: '请输入门店代码',
+                        en: 'Please enter an outlet code'
+                    },
+                    errorOutletName: {
+                        zh: '请输入门店名称',
+                        en: 'Please enter an outlet name'
+                    },
+                    errorOutletAddress: {
+                        zh: '请输入门店地址',
+                        en: 'Please enter an outlet address'
+                    },
+                    errorOutletCodeExists: {
+                        zh: '该门店代码已存在',
+                        en: 'This outlet code already exists'
+                    },
+                    // Authentication translations
+                    checkingAuth: {
+                        zh: '验证身份中...',
+                        en: 'Checking authentication...'
+                    },
+                    notAuthorized: {
+                        zh: '未授权访问',
+                        en: 'Not Authorized'
+                    },
+                    redirectingToLogin: {
+                        zh: '您无权访问此页面。正在重定向到首页...',
+                        en: 'You are not authorized to access this page. Redirecting to home...'
+                    },
+                    back: {
+                        zh: '返回',
+                        en: 'Back'
+                    }
+                };
+                
+                // Function to get translation
+                const t = (key, ...args) => {
+                    let text = translations[key]?.[currentLang.value] || key;
+                    if (args.length > 0) {
+                        args.forEach((arg, index) => {
+                            text = text.replace(`{${index}}`, arg);
+                        });
+                    }
+                    return text;
+                };
+                
+                // Form data
+                const outletCode = ref('');
+                const outletName = ref('');
+                const outletAddress = ref('');
+                
+                // UI states
+                const isLoading = ref(false);
+                const isSubmitting = ref(false);
+                const message = ref({ type: '', text: '' });
+                const isEditing = ref(false);
+                const outlets = ref([]);
+                const searchQuery = ref('');
+                const prefixFilter = ref('all'); // Default to show all prefixes
+                
+                // Get prefix from outlet code (everything before the dash)
+                const getPrefix = (code) => {
+                    if (!code) return '';
+                    const dashIndex = code.indexOf('-');
+                    return dashIndex > 0 ? code.substring(0, dashIndex) : code;
+                };
+                
+                // Get unique prefixes from outlets
+                const availablePrefixes = computed(() => {
+                    const prefixes = new Set();
+                    outlets.value.forEach(outlet => {
+                        const prefix = getPrefix(outlet.id);
+                        if (prefix) {
+                            prefixes.add(prefix);
+                        }
+                    });
+                    return Array.from(prefixes).sort();
+                });
+                
+                // Filter outlets
+                const filteredOutlets = computed(() => {
+                    let filtered = outlets.value;
+                    
+                    // Apply prefix filter if not set to "all"
+                    if (prefixFilter.value !== 'all') {
+                        filtered = filtered.filter(outlet => 
+                            getPrefix(outlet.id) === prefixFilter.value
+                        );
+                    }
+                    
+                    // Apply search filter if there's a search query
+                    if (searchQuery.value) {
+                        const query = searchQuery.value.toLowerCase();
+                        filtered = filtered.filter(outlet => 
+                            (outlet.id && outlet.id.toLowerCase().includes(query)) || 
+                            (outlet.name && outlet.name.toLowerCase().includes(query)) ||
+                            (outlet.address && outlet.address.toLowerCase().includes(query))
+                        );
+                    }
+                    
+                    // Group by prefix
+                    const grouped = {};
+                    filtered.forEach(outlet => {
+                        const prefix = getPrefix(outlet.id);
+                        if (!grouped[prefix]) {
+                            grouped[prefix] = [];
+                        }
+                        grouped[prefix].push(outlet);
+                    });
+                    
+                    // Convert back to array for rendering, with headers
+                    const result = [];
+                    Object.keys(grouped).sort().forEach(prefix => {
+                        result.push({
+                            isHeader: true,
+                            id: prefix,
+                            name: prefix
+                        });
+                        result.push(...grouped[prefix]);
+                    });
+                    
+                    return result;
+                });
+                
+                // Reset form
+                const resetForm = () => {
+                    outletCode.value = '';
+                    outletName.value = '';
+                    outletAddress.value = '';
+                    isEditing.value = false;
+                };
+                
+                // Load outlets
+                const loadOutlets = async () => {
+                    isLoading.value = true;
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        const outletsRef = collection(db, 'outlets');
+                        const snapshot = await getDocs(outletsRef);
+                        
+                        if (snapshot.empty) {
+                            outlets.value = [];
+                            return;
+                        }
+                        
+                        outlets.value = snapshot.docs.map(doc => {
+                            return {
+                                id: doc.id,
+                                name: doc.data().name || '',
+                                address: doc.data().address || ''
+                            };
+                        });
+                        
+                        // Sort outlets by name for better UX
+                        outlets.value.sort((a, b) => a.name.localeCompare(b.name));
+                    } catch (error) {
+                        console.error('Error loading outlets:', error);
+                        message.value = { type: 'error', text: error.message };
+                    } finally {
+                        isLoading.value = false;
+                    }
+                };
+                
+                // Edit outlet
+                const editOutlet = (outlet) => {
+                    // Skip if it's a header row
+                    if (outlet.isHeader) return;
+                    
+                    outletCode.value = outlet.id;
+                    outletName.value = outlet.name || '';
+                    outletAddress.value = outlet.address || '';
+                    isEditing.value = true;
+                    
+                    // Scroll to form
+                    document.getElementById('outlet-form').scrollIntoView({ behavior: 'smooth' });
+                };
+                
+                // Delete outlet
+                const deleteOutlet = async (outlet) => {
+                    // Skip if it's a header row
+                    if (outlet.isHeader) return;
+                    
+                    if (!confirm(t('deleteConfirm', outlet.name))) {
+                        return;
+                    }
+                    
+                    isSubmitting.value = true;
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        const outletRef = doc(db, 'outlets', outlet.id);
+                        await deleteDoc(outletRef);
+                        
+                        // Success message
+                        message.value = { type: 'success', text: t('successDelete', outlet.name) };
+                        
+                        // Reload outlets
+                        await loadOutlets();
+                    } catch (error) {
+                        console.error('Error deleting outlet:', error);
+                        message.value = { type: 'error', text: t('failedDelete', error.message) };
+                    } finally {
+                        isSubmitting.value = false;
+                    }
+                };
+                
+                // Check if outlet code exists
+                const checkOutletCodeExists = async (code) => {
+                    if (!code) return false;
+                    
+                    const outletRef = doc(db, 'outlets', code);
+                    const outletDoc = await getDoc(outletRef);
+                    return outletDoc.exists();
+                };
+                
+                // Submit form
+                const submitForm = async () => {
+                    // Validate form
+                    if (!outletCode.value) {
+                        message.value = { type: 'error', text: t('errorOutletCode') };
+                        return;
+                    }
+                    
+                    if (!outletName.value) {
+                        message.value = { type: 'error', text: t('errorOutletName') };
+                        return;
+                    }
+                    
+                    if (!outletAddress.value) {
+                        message.value = { type: 'error', text: t('errorOutletAddress') };
+                        return;
+                    }
+                    
+                    isSubmitting.value = true;
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        // Check if outlet code exists (for new outlets)
+                        if (!isEditing.value) {
+                            const exists = await checkOutletCodeExists(outletCode.value);
+                            if (exists) {
+                                message.value = { type: 'error', text: t('errorOutletCodeExists') };
+                                isSubmitting.value = false;
+                                return;
+                            }
+                        }
+                        
+                        // Prepare outlet data
+                        const outletData = {
+                            name: outletName.value,
+                            address: outletAddress.value,
+                            updatedAt: serverTimestamp()
+                        };
+                        
+                        // If creating a new outlet, add creation timestamp
+                        if (!isEditing.value) {
+                            outletData.createdAt = serverTimestamp();
+                        }
+                        
+                        // Save to Firestore
+                        const outletRef = doc(db, 'outlets', outletCode.value);
+                        
+                        if (isEditing.value) {
+                            await updateDoc(outletRef, outletData);
+                            message.value = { type: 'success', text: t('successUpdate', outletName.value) };
+                        } else {
+                            await setDoc(outletRef, outletData);
+                            message.value = { type: 'success', text: t('successAdd', outletName.value) };
+                        }
+                        
+                        // Reset form and reload outlets
+                        resetForm();
+                        await loadOutlets();
+                    } catch (error) {
+                        console.error('Error saving outlet:', error);
+                        message.value = { type: 'error', text: t('failedSave', error.message) };
+                    } finally {
+                        isSubmitting.value = false;
+                    }
+                };
+                
+                // Initialize
+                onMounted(() => {
+                    // Check authentication first
+                    onAuthStateChanged(auth, (user) => {
+                        checkAuthStatus(user);
+                        
+                        // Show app and hide loading screen after auth check
+                        document.getElementById('app').classList.add('loaded');
+                        document.getElementById('initial-loading').style.display = 'none';
+                    });
+                    
+                    // Load saved language preference
+                    const savedLang = localStorage.getItem('preferred_language');
+                    if (savedLang && (savedLang === 'zh' || savedLang === 'en')) {
+                        currentLang.value = savedLang;
+                    }
+                });
+                
+                // Load outlets once authentication is confirmed
+                watch(isAuthenticated, async (isAuthed) => {
+                    if (isAuthed) {
+                        await loadOutlets();
+                    }
+                });
+                
+                // Handle language switching
+                const toggleLanguage = () => {
+                    currentLang.value = currentLang.value === 'zh' ? 'en' : 'zh';
+                    // Save preference to localStorage
+                    localStorage.setItem('preferred_language', currentLang.value);
+                };
+                
+                return {
+                    currentLang,
+                    t,
+                    toggleLanguage,
+                    outletCode,
+                    outletName,
+                    outletAddress,
+                    prefixFilter,
+                    availablePrefixes,
+                    isLoading,
+                    isSubmitting,
+                    message,
+                    isEditing,
+                    outlets,
+                    searchQuery,
+                    filteredOutlets,
+                    resetForm,
+                    loadOutlets,
+                    editOutlet,
+                    deleteOutlet,
+                    submitForm,
+                    isAuthenticated,
+                    isCheckingAuth,
+                    userEmail,
+                    goBack
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
