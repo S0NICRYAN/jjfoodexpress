@@ -689,7 +689,6 @@
                         userEmail.value = userCredential.user.email;
                         currentPage.value = 'dashboard';
                     } catch (error) {
-                        console.error('Login error:', error);
                         loginError.value = t('loginError');
                     } finally {
                         isLoggingIn.value = false;
@@ -704,7 +703,7 @@
                         email.value = '';
                         password.value = '';
                     } catch (error) {
-                        console.error('Logout error:', error);
+                        // Silent fail for logout errors
                     }
                 };
                 

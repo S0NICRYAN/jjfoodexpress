@@ -784,14 +784,9 @@
                     try {
                         const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
                         await deleteDoc(productRef);
-                        
-                        // Success message
                         message.value = { type: 'success', text: t('successDelete', product.name) };
-                        
-                        // Reload products
                         await loadProducts();
                     } catch (error) {
-                        console.error('Error deleting product:', error);
                         message.value = { type: 'error', text: t('failedDelete', error.message) };
                     } finally {
                         isSubmitting.value = false;
@@ -800,14 +795,13 @@
                 
                 // Submit form
                 const submitForm = async () => {
-                    // Validate form
-                    if (!productName.value) {
-                        message.value = { type: 'error', text: t('errorProductName') };
+                    if (!productId.value) {
+                        message.value = { type: 'error', text: t('errorProductId') };
                         return;
                     }
                     
-                    if (!productPrice.value) {
-                        message.value = { type: 'error', text: t('errorProductPrice') };
+                    if (!productName.value) {
+                        message.value = { type: 'error', text: t('errorProductName') };
                         return;
                     }
                     
@@ -815,35 +809,19 @@
                     message.value = { type: '', text: '' };
                     
                     try {
-                        // Generate ID if not editing
-                        if (!isEditing.value) {
-                            productId.value = generateProductId();
-                        }
-                        
-                        // Prepare product data
                         const productData = {
                             name: productName.value,
                             cname: productChineseName.value,
-                            price: productPrice.value,
-                            unit: extractChinesePart(productUnit.value), // Only store Chinese part
-                            UOM: productUOM.value,
+                            price: parseFloat(productPrice.value) || 0,
+                            unit: productUnit.value,
+                            unitChinese: productUnit.value,
                             updatedAt: serverTimestamp()
                         };
                         
-                        // Add image data directly to the document if available
-                        if (imageData.value) {
-                            productData.imageData = imageData.value;
-                        } else if (imagePreview.value && isEditing.value) {
-                            // Keep existing image if editing and no new file
-                            productData.imageData = imagePreview.value;
-                        }
-                        
-                        // If creating a new product, add creation timestamp
                         if (!isEditing.value) {
                             productData.createdAt = serverTimestamp();
                         }
                         
-                        // Save to Firestore
                         const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, productId.value);
                         
                         if (isEditing.value) {
@@ -854,11 +832,9 @@
                             message.value = { type: 'success', text: t('successAdd', productName.value) };
                         }
                         
-                        // Reset form and reload products
                         resetForm();
                         await loadProducts();
                     } catch (error) {
-                        console.error('Error saving product:', error);
                         message.value = { type: 'error', text: t('failedSave', error.message) };
                     } finally {
                         isSubmitting.value = false;
@@ -867,51 +843,35 @@
                 
                 // Copy products
                 const copyProducts = async () => {
-                    if (!sourceOutlet.value || !selectedOutlet.value) return;
+                    if (!sourceOutlet.value || !selectedOutlet.value) {
+                        message.value = { type: 'error', text: t('errorSelectOutlets') };
+                        return;
+                    }
                     
                     isCopying.value = true;
                     message.value = { type: '', text: '' };
                     
                     try {
-                        // Get products from source outlet
-                        const sourceProductsRef = collection(db, `outlets/${sourceOutlet.value}/products`);
-                        const snapshot = await getDocs(sourceProductsRef);
+                        const sourceRef = collection(db, `outlets/${sourceOutlet.value}/products`);
+                        const targetRef = collection(db, `outlets/${selectedOutlet.value}/products`);
                         
-                        if (snapshot.empty) {
-                            message.value = { type: 'error', text: t('noProductsFound') };
-                            return;
-                        }
-                        
+                        const snapshot = await getDocs(sourceRef);
                         let copiedCount = 0;
                         
-                        // Copy each product to the target outlet
-                        for (const docSnapshot of snapshot.docs) {
-                            const productData = docSnapshot.data();
-                            
-                            // Generate new ID for the copied product
-                            const newId = generateProductId();
-                            
-                            // Create new product document in target outlet
-                            const targetProductRef = doc(db, `outlets/${selectedOutlet.value}/products`, newId);
-                            
-                            // Add timestamps
-                            const productToSave = {
+                        for (const doc of snapshot.docs) {
+                            const productData = doc.data();
+                            await setDoc(doc(targetRef, doc.id), {
                                 ...productData,
                                 createdAt: serverTimestamp(),
                                 updatedAt: serverTimestamp()
-                            };
-                            
-                            await setDoc(targetProductRef, productToSave);
+                            });
                             copiedCount++;
                         }
                         
                         message.value = { type: 'success', text: t('importSuccess', copiedCount) };
                         showCopyModal.value = false;
-                        
-                        // Reload products in current outlet
                         await loadProducts();
                     } catch (error) {
-                        console.error('Error importing products:', error);
                         message.value = { type: 'error', text: t('importError', error.message) };
                     } finally {
                         isCopying.value = false;

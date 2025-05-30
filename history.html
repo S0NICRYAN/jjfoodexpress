@@ -258,7 +258,6 @@
                     try {
                         const urlParams = new URLSearchParams(window.location.search);
                         const outlet = urlParams.get('outlet');
-                        console.log("Outlet from URL params:", outlet);
                         return outlet || null;
                     } catch (error) {
                         console.error("Error getting outlet from URL:", error);
@@ -269,8 +268,6 @@
                 // Fetch outlet data
                 const fetchOutletData = async (id) => {
                     try {
-                        console.log('Fetching outlet data for ID:', id);
-                        
                         if (!id) {
                             errorMessage.value = 'No valid outlet ID provided';
                             return false;
@@ -280,7 +277,6 @@
                         const outletDoc = await getDoc(outletRef);
                         
                         if (!outletDoc.exists()) {
-                            console.error('Outlet document does not exist:', id);
                             errorMessage.value = `Outlet with ID "${id}" not found`;
                             return false;
                         }
@@ -290,11 +286,8 @@
                         outletName.value = outletData.name || id;
                         outletAddress.value = outletData.address || 'No address available';
                         
-                        console.log('Set outlet name to:', outletName.value);
-                        console.log('Set outlet address to:', outletAddress.value);
                         return true;
                     } catch (error) {
-                        console.error('Error fetching outlet data:', error);
                         errorMessage.value = `Failed to load outlet information: ${error.message}`;
                         return false;
                     }
@@ -303,8 +296,6 @@
                 // Fetch order history for the outlet
                 const fetchOrderHistory = async () => {
                     try {
-                        console.log('Fetching order history for outlet:', outletId.value);
-                        
                         isLoading.value = true;
                         orders.value = [];
                         
@@ -313,13 +304,12 @@
                         const q = query(
                             ordersRef,
                             where('outletId', '==', outletId.value),
-                            orderBy('createdAt', 'desc') // Use createdAt instead of orderDate to match preview.html
+                            orderBy('createdAt', 'desc')
                         );
                         
                         const querySnapshot = await getDocs(q);
                         
                         if (querySnapshot.empty) {
-                            console.log('No orders found for this outlet');
                             isLoading.value = false;
                             return;
                         }
@@ -329,21 +319,18 @@
                         querySnapshot.forEach(doc => {
                             const orderData = doc.data();
                             
-                            // Make sure we have all required fields
                             ordersList.push({
                                 id: doc.id,
                                 ...orderData,
-                                orderDate: orderData.createdAt || orderData.orderDate, // Use createdAt as orderDate if available
+                                orderDate: orderData.createdAt || orderData.orderDate,
                                 formattedDate: formatDate(orderData.createdAt || orderData.orderDate),
-                                status: orderData.status || 'pending' // Default to pending if status is not set
+                                status: orderData.status || 'pending'
                             });
                         });
                         
                         orders.value = ordersList;
-                        console.log('Loaded orders:', orders.value);
                         
                     } catch (error) {
-                        console.error('Error loading order history:', error);
                         errorMessage.value = `Failed to load order history: ${error.message}`;
                     } finally {
                         isLoading.value = false;

@@ -333,7 +333,6 @@
                             document.querySelector('.content-wrapper').classList.add('loaded');
                         }, 300);
                     } catch (error) {
-                        console.error('Error loading preview data:', error);
                         errorMessage.value = '加载订单数据时出错。返回订单页面... / Error loading order data. Redirecting back to order page...';
                         
                         // Redirect back to order page after showing error
@@ -377,7 +376,6 @@
                         dateError.value = '';
                         return true;
                     } catch (e) {
-                        console.error('Date validation error:', e);
                         dateError.value = '请选择有效的送货日期 / Please select a valid delivery date';
                         return false;
                     }
@@ -467,9 +465,7 @@
                         // Send email using EmailJS
                         try {
                             await emailjs.send(emailjsServiceId, emailjsTemplateId, templateParams);
-                            console.log('Email sent successfully');
                         } catch (emailError) {
-                            console.error('Error sending email:', emailError);
                             // Don't throw the error - we still want to show success if the order was saved
                         }
                         
@@ -482,7 +478,6 @@
                         // Scroll to top to show success message
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     } catch (error) {
-                        console.error('Error submitting order:', error);
                         errorMessage.value = '提交订单失败。请重试。 / Failed to submit order. Please try again.';
                     } finally {
                         isSubmitting.value = false;

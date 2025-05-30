@@ -496,8 +496,7 @@
                     try {
                         const urlParams = new URLSearchParams(window.location.search);
                         const outlet = urlParams.get('outlet');
-                        console.log("Outlet from URL params:", outlet);
-                        return outlet || null; // Return null if no outlet in URL
+                        return outlet || null;
                     } catch (error) {
                         console.error("Error getting outlet from URL:", error);
                         return null;
@@ -507,95 +506,26 @@
                 // Function to fetch outlet data with enhanced error handling
                 const fetchOutletData = async (id) => {
                     try {
-                        console.log('Fetching outlet data for ID:', id);
-                        
                         if (!id) {
-                            console.error('Invalid outlet ID (null or empty)');
                             errorMessage.value = 'No valid outlet ID provided';
                             return false;
                         }
                         
-                        // First try to list all outlets to check what's available
-                        try {
-                            const outletsRef = collection(db, 'outlets');
-                            const outletsSnapshot = await getDocs(outletsRef);
-                            console.log('Available outlets count:', outletsSnapshot.size);
-                            
-                            const availableIds = [];
-                            outletsSnapshot.forEach(doc => {
-                                availableIds.push(doc.id);
-                                console.log(`Found outlet: ${doc.id} with data:`, doc.data());
-                            });
-                            
-                            console.log('Available outlet IDs:', availableIds);
-                            
-                            if (availableIds.length === 0) {
-                                console.error('No outlets found in the database');
-                                errorMessage.value = 'No outlets found in the database. Please contact support.';
-                                return false;
-                            }
-                            
-                            if (!availableIds.includes(id)) {
-                                console.error(`Requested outlet ID "${id}" not found in available outlets`);
-                                
-                                // If exact match not found, check for case insensitive match
-                                const matchingId = availableIds.find(availId => 
-                                    availId.toLowerCase() === id.toLowerCase()
-                                );
-                                
-                                if (matchingId) {
-                                    console.log(`Found case-insensitive match: ${matchingId}`);
-                                    // Use the matching ID with correct case
-                                    id = matchingId;
-                                } else {
-                                    // Suggest the first available outlet as fallback
-                                    errorMessage.value = `Outlet "${id}" not found. Available outlets: ${availableIds.join(', ')}`;
-                                    return false;
-                                }
-                            }
-                        } catch (error) {
-                            console.error('Error listing outlets:', error);
-                        }
-                        
-                        // Try to get the specific outlet
                         const outletRef = doc(db, 'outlets', id);
                         const outletDoc = await getDoc(outletRef);
                         
                         if (!outletDoc.exists()) {
-                            console.error('Outlet document does not exist:', id);
                             errorMessage.value = `Outlet with ID "${id}" not found`;
                             return false;
                         }
                         
-                        // Get the data
                         const outletData = outletDoc.data();
-                        console.log('Outlet data retrieved:', outletData);
-                        
-                        // Check if name and address fields exist
-                        if (!outletData.hasOwnProperty('name')) {
-                            console.warn('Outlet data missing "name" field');
-                        }
-                        
-                        if (!outletData.hasOwnProperty('address')) {
-                            console.warn('Outlet data missing "address" field');
-                        }
-                        
-                        // Log all available fields
-                        console.log('Available fields in outlet data:', Object.keys(outletData));
-                        
-                        // Set the outlet information, with fallbacks
                         outletName.value = outletData.name || id;
                         outletAddress.value = outletData.address || 'No address available';
-                        
-                        console.log('Set outlet name to:', outletName.value);
-                        console.log('Set outlet address to:', outletAddress.value);
                         return true;
                     } catch (error) {
-                        console.error('Error fetching outlet data:', error);
                         errorMessage.value = `Failed to load outlet information: ${error.message}`;
                         return false;
-                    } finally {
-                        isLoading.value = false;
                     }
                 };
                 
@@ -617,15 +547,6 @@
                         
                         products.value = snapshot.docs.map(doc => {
                             const data = doc.data();
-                            console.log(`Product ${doc.id} data:`, data);
-                            
-                            // Check if imageData exists and log it
-                            if (data.imageData) {
-                                console.log(`Product ${doc.id} has imageData`);
-                            } else {
-                                console.log(`Product ${doc.id} doesn't have imageData`);
-                            }
-                            
                             return {
                                 id: doc.id,
                                 ...data,
@@ -633,11 +554,9 @@
                             };
                         });
                         
-                        console.log('Loaded products:', products.value);
                         isLoading.value = false;
                         return true;
                     } catch (error) {
-                        console.error('Error loading products:', error);
                         errorMessage.value = `Failed to load products: ${error.message}`;
                         isLoading.value = false;
                         return false;
@@ -647,29 +566,17 @@
                 // Load the specific outlet
                 const loadOutlet = async (id) => {
                     try {
-                        console.log('Starting loadOutlet for ID:', id);
-                        // Reset any error messages
                         errorMessage.value = '';
-                        
-                        // Set the outlet ID
                         outletId.value = id;
-                        console.log('Set outletId.value to:', outletId.value);
                         
-                        // Load outlet data - using the exact ID as shown in Firebase
-                        console.log('Calling fetchOutletData...');
                         const outletLoaded = await fetchOutletData(id);
-                        console.log('fetchOutletData result:', outletLoaded);
                         
                         if (!outletLoaded) {
-                            console.error('Failed to load outlet data');
                             return false;
                         }
                         
-                        // Load products for this outlet
-                        console.log('Loading products for outlet:', id);
                         const productsLoaded = await loadProducts(id);
                         
-                        // Add a small delay before showing content to ensure smooth transition
                         setTimeout(() => {
                             isLoading.value = false;
                             document.querySelector('.content-wrapper').classList.add('loaded');
@@ -678,7 +585,6 @@
                         
                         return productsLoaded;
                     } catch (error) {
-                        console.error('Error in loadOutlet:', error);
                         errorMessage.value = `Error loading outlet: ${error.message}`;
                         isLoading.value = false;
                         return false;
@@ -687,31 +593,26 @@
                 
                 // Add retry function
                 const retryLoading = async () => {
-                    console.log('Retrying outlet loading...');
                     errorMessage.value = '';
                     isLoading.value = true;
                     
-                    // Get the outlet ID from URL or use a default
                     const urlOutletId = getOutletIdFromUrl();
                     
                     if (urlOutletId) {
                         await loadOutlet(urlOutletId);
                     } else {
-                        // Try to get the first available outlet as fallback
                         try {
                             const outletsRef = collection(db, 'outlets');
                             const outletsSnapshot = await getDocs(outletsRef);
                             
                             if (!outletsSnapshot.empty) {
                                 const firstOutletId = outletsSnapshot.docs[0].id;
-                                console.log('No outlet ID in URL, using first available:', firstOutletId);
                                 await loadOutlet(firstOutletId);
                             } else {
                                 errorMessage.value = 'No outlets available in the database.';
                                 isLoading.value = false;
                             }
                         } catch (error) {
-                            console.error('Error finding fallback outlet:', error);
                             errorMessage.value = 'Error finding any outlets. Please contact support.';
                             isLoading.value = false;
                         }
@@ -720,23 +621,15 @@
 
                 onMounted(async () => {
                     try {
-                        // Check if outlet ID is specified in URL
                         const urlOutletId = getOutletIdFromUrl();
-                        console.log('Outlet ID from URL:', urlOutletId);
                         
-                        // If outlet is specified in URL
                         if (urlOutletId) {
-                            console.log('Loading outlet with ID:', urlOutletId);
-                            const result = await loadOutlet(urlOutletId);
-                            console.log('Load outlet result:', result);
+                            await loadOutlet(urlOutletId);
                         } else {
-                            // No outlet specified in URL
-                            console.error('No outlet ID found in URL');
                             errorMessage.value = 'No outlet specified. Please include ?outlet=CODE in the URL.';
                             isLoading.value = false;
                         }
                     } catch (error) {
-                        console.error('Error during initialization:', error);
                         errorMessage.value = `Initialization error: ${error.message}`;
                         isLoading.value = false;
                     }

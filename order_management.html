@@ -843,10 +843,7 @@
                         
                         // Save PDF
                         doc.save(`Invoice_${order.orderId}.pdf`);
-                        console.log('PDF generated successfully');
-                        
                     } catch (error) {
-                        console.error('PDF Error:', error);
                         alert('Failed to generate PDF: ' + error.message);
                     }
                 };

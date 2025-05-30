@@ -519,7 +519,6 @@
                 
                 // Delete outlet
                 const deleteOutlet = async (outlet) => {
-                    // Skip if it's a header row
                     if (outlet.isHeader) return;
                     
                     if (!confirm(t('deleteConfirm', outlet.name))) {
@@ -532,14 +531,9 @@
                     try {
                         const outletRef = doc(db, 'outlets', outlet.id);
                         await deleteDoc(outletRef);
-                        
-                        // Success message
                         message.value = { type: 'success', text: t('successDelete', outlet.name) };
-                        
-                        // Reload outlets
                         await loadOutlets();
                     } catch (error) {
-                        console.error('Error deleting outlet:', error);
                         message.value = { type: 'error', text: t('failedDelete', error.message) };
                     } finally {
                         isSubmitting.value = false;
@@ -557,7 +551,6 @@
                 
                 // Submit form
                 const submitForm = async () => {
-                    // Validate form
                     if (!outletCode.value) {
                         message.value = { type: 'error', text: t('errorOutletCode') };
                         return;
@@ -577,7 +570,6 @@
                     message.value = { type: '', text: '' };
                     
                     try {
-                        // Check if outlet code exists (for new outlets)
                         if (!isEditing.value) {
                             const exists = await checkOutletCodeExists(outletCode.value);
                             if (exists) {
@@ -587,19 +579,16 @@
                             }
                         }
                         
-                        // Prepare outlet data
                         const outletData = {
                             name: outletName.value,
                             address: outletAddress.value,
                             updatedAt: serverTimestamp()
                         };
                         
-                        // If creating a new outlet, add creation timestamp
                         if (!isEditing.value) {
                             outletData.createdAt = serverTimestamp();
                         }
                         
-                        // Save to Firestore
                         const outletRef = doc(db, 'outlets', outletCode.value);
                         
                         if (isEditing.value) {
@@ -610,11 +599,9 @@
                             message.value = { type: 'success', text: t('successAdd', outletName.value) };
                         }
                         
-                        // Reset form and reload outlets
                         resetForm();
                         await loadOutlets();
                     } catch (error) {
-                        console.error('Error saving outlet:', error);
                         message.value = { type: 'error', text: t('failedSave', error.message) };
                     } finally {
                         isSubmitting.value = false;
