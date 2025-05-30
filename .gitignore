@@ -9,7 +9,6 @@ yarn-debug.log*
 # Firebase cache and config
 .firebase/
 .env
-secrets.js
 
 # Editor and OS files
 .DS_Store
