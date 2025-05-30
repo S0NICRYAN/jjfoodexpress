@@ -281,6 +281,65 @@
             height: 600px;
             border-radius: 10px;
         }
+
+        /* Mobile-friendly quantity input styles */
+        @media (max-width: 768px) {
+            .qty-input {
+                -webkit-appearance: none;
+                -moz-appearance: textfield;
+                appearance: textfield;
+                width: 80px;
+                height: 40px;
+                font-size: 16px;
+                text-align: center;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                background-color: white;
+            }
+
+            .qty-input::-webkit-inner-spin-button,
+            .qty-input::-webkit-outer-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+
+            .order-qty {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 10px;
+            }
+
+            .order-qty span {
+                flex: 1;
+            }
+
+            /* Add touch-friendly increment/decrement buttons */
+            .qty-controls {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .qty-btn {
+                width: 40px;
+                height: 40px;
+                border: 1px solid #ddd;
+                background: #f8f9fa;
+                border-radius: 4px;
+                font-size: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                user-select: none;
+                -webkit-user-select: none;
+            }
+
+            .qty-btn:active {
+                background: #e9ecef;
+            }
+        }
     </style>
     
     <!-- Firebase v9 (modular) -->
@@ -935,13 +994,19 @@
                         <div v-else class="product-price">${{ formatCurrency(parseFloat(product.price || 0)) }} 每{{ product.unit }} <span class="unit-english">(per {{ getUnitTranslation(product.unit) }})</span></div>
                         <div class="order-qty">
                             <span>订购数量 (Order Qty):</span>
-                            <input 
-                                type="number" 
-                                class="qty-input" 
-                                v-model.number="product.orderQty" 
-                                min="0" 
-                                @change="updateTotals"
-                            >
+                            <div class="qty-controls">
+                                <button class="qty-btn" @click="product.orderQty = Math.max(0, (product.orderQty || 0) - 1); updateTotals()">-</button>
+                                <input 
+                                    type="number" 
+                                    class="qty-input" 
+                                    v-model.number="product.orderQty" 
+                                    min="0" 
+                                    @change="updateTotals"
+                                    inputmode="numeric"
+                                    pattern="[0-9]*"
+                                >
+                                <button class="qty-btn" @click="product.orderQty = (product.orderQty || 0) + 1; updateTotals()">+</button>
+                            </div>
                         </div>
                     </div>
                 </div>
