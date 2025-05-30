@@ -1,4 +1,6 @@
-export default {
+import { defineConfig } from 'vite'
+
+export default defineConfig({
   // Enable environment variable loading
   envPrefix: 'VITE_',
   
@@ -12,6 +14,16 @@ export default {
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        order: 'order.html',
+        product: 'product.html',
+        preview: 'preview.html',
+        history: 'history.html',
+        outlet_management: 'outlet_management.html'
+      }
+    }
   }
-} 
+}) 
