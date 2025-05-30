@@ -741,30 +741,214 @@ input[type="date"] {
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+        margin: 10px auto;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+    h2 {
+        font-size: 1.2rem;
+    }
+
+    .card {
+        padding: 15px;
+    }
+
+    .header-content {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .logo {
+        justify-content: center;
+    }
+
+    .header-actions {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .user-info {
+        width: 100%;
+        justify-content: center;
+    }
+
     .form-row {
         flex-direction: column;
+        gap: 10px;
     }
-    
-    .table-actions {
+
+    .form-group-flex {
+        min-width: 100%;
+    }
+
+    .search-container {
         flex-direction: column;
     }
-    
+
+    .filter-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
     .product-table {
         display: block;
         overflow-x: auto;
+        white-space: nowrap;
     }
-    
-    .header-actions {
-        flex-wrap: wrap;
+
+    .table-actions {
+        flex-direction: column;
+        gap: 5px;
     }
-    
+
+    .table-actions .btn {
+        width: 100%;
+        margin: 0;
+    }
+
     .orders-grid {
         grid-template-columns: 1fr;
     }
-    
+
+    .order-card {
+        margin: 10px 0;
+    }
+
     .modal-content {
         width: 95%;
-        margin: 2% auto;
+        margin: 10px;
+        padding: 15px;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .modal-actions button {
+        width: 100%;
+    }
+
+    .items-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    .details-row {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .details-label {
+        width: 100%;
+    }
+
+    .details-value {
+        width: 100%;
+    }
+}
+
+/* Additional mobile optimizations for very small screens */
+@media (max-width: 480px) {
+    .container {
+        padding: 0 10px;
+    }
+
+    .card {
+        padding: 10px;
+    }
+
+    .form-control {
+        padding: 8px 10px;
+    }
+
+    .btn {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+
+    .logo img {
+        height: 40px;
+    }
+
+    .logo {
+        font-size: 1rem;
+    }
+
+    .header-actions {
+        gap: 5px;
+    }
+
+    .back-btn, .language-toggle {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+
+    .message {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+}
+
+/* Fix for table responsiveness */
+@media (max-width: 768px) {
+    .product-table th,
+    .product-table td {
+        padding: 8px;
+        font-size: 0.9rem;
+    }
+
+    .product-table th:first-child,
+    .product-table td:first-child {
+        position: sticky;
+        left: 0;
+        background-color: white;
+        z-index: 1;
+    }
+
+    .product-table th:first-child {
+        background-color: #f8f9fa;
+    }
+}
+
+/* Improve form controls on mobile */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .form-control:focus {
+        box-shadow: none;
+    }
+}
+
+/* Improve modal scrolling on mobile */
+@media (max-width: 768px) {
+    .modal {
+        padding: 10px;
+    }
+
+    .modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
     }
 }
 
