@@ -342,6 +342,88 @@
         #app.loaded {
             visibility: visible;
         }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            header {
+                padding: 10px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .logo {
+                justify-content: center;
+            }
+
+            .logo img {
+                height: 40px;
+            }
+
+            .header-user {
+                flex-direction: column;
+                width: 100%;
+                gap: 10px;
+            }
+
+            .user-info {
+                justify-content: center;
+                width: 100%;
+            }
+
+            .logout-btn {
+                width: 100%;
+                padding: 8px;
+            }
+
+            .language-toggle {
+                width: 100%;
+                padding: 8px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            .dashboard-container {
+                padding: 20px 10px;
+            }
+
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .menu-item {
+                margin: 0;
+            }
+
+            .menu-icon {
+                height: 100px;
+            }
+        }
+
+        /* Additional small screen optimizations */
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 1rem;
+            }
+
+            .logo img {
+                height: 35px;
+            }
+
+            .user-info {
+                font-size: 0.85rem;
+            }
+
+            .logout-btn, .language-toggle {
+                font-size: 0.85rem;
+            }
+        }
     </style>
     <!-- Vue 3 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
