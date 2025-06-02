@@ -881,7 +881,7 @@
                 
                 // Initialize
                 onMounted(() => {
-                    generateProductId()
+                    productId.value = generateProductId()
                     // Check authentication first
                     onAuthStateChanged(auth, (user) => {
                         checkAuthStatus(user);
