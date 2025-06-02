@@ -706,6 +706,7 @@
                     imagePreview.value = '';
                     imageData.value = '';
                     isEditing.value = false;
+                    productId.value = generateProductId();
                 };
                 
                 // Load products
@@ -880,6 +881,7 @@
                 
                 // Initialize
                 onMounted(() => {
+                    generateProductId()
                     // Check authentication first
                     onAuthStateChanged(auth, (user) => {
                         checkAuthStatus(user);
