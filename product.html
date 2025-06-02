@@ -814,8 +814,7 @@
                             name: productName.value,
                             cname: productChineseName.value,
                             price: parseFloat(productPrice.value) || 0,
-                            unit: productUnit.value,
-                            unitChinese: productUnit.value,
+                            unit: extractChinesePart(productUnit.value),
                             imageData: imageData.value,
                             updatedAt: serverTimestamp()
                         };
