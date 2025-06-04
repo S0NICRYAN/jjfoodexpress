@@ -138,7 +138,7 @@
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.cname }}</td>
                                 <td>${{ product.price }}</td>
-                                <td>{{ product.unit }}</td>
+                                <td>{{ getUnitDisplay(product.unit) }}</td>
                                 <td>{{ product.UOM }}</td>
                                 <td>{{ product.stock }}</td>
                                 <td>
@@ -215,6 +215,59 @@
                 ]);
                 const currentLang = ref('zh');
 
+                // --- Translations ---
+                const translations = {
+                    appTitle: { zh: '产品管理系统', en: 'Product Management' },
+                    addNewProduct: { zh: '添加新产品', en: 'Add New Product' },
+                    editProduct: { zh: '编辑产品', en: 'Edit Product' },
+                    productNameEn: { zh: '产品名称 (英文)', en: 'Product Name (English)' },
+                    productNameCn: { zh: '产品名称 (中文)', en: 'Product Name (Chinese)' },
+                    price: { zh: '价格', en: 'Price' },
+                    unit: { zh: '单位', en: 'Unit' },
+                    uom: { zh: '计量单位', en: 'UOM (Unit of Measurement)' },
+                    stock: { zh: '库存', en: 'Stock' },
+                    productImage: { zh: '产品图片:', en: 'Product Image:' },
+                    imageSizeInfo: { zh: '* 图片大小必须小于 1MB', en: '* Images must be under 1MB in size' },
+                    noImageSelected: { zh: '未选择图片', en: 'No image selected' },
+                    saving: { zh: '保存中...', en: 'Saving...' },
+                    updateProduct: { zh: '更新产品', en: 'Update Product' },
+                    addProduct: { zh: '添加产品', en: 'Add Product' },
+                    cancelEditing: { zh: '取消编辑', en: 'Cancel Editing' },
+                    productList: { zh: '产品列表', en: 'Product List' },
+                    searchProducts: { zh: '搜索产品...', en: 'Search products...' },
+                    loadingProducts: { zh: '加载产品中...', en: 'Loading products...' },
+                    noProductsFound: { zh: '未找到产品。', en: 'No products found.' },
+                    image: { zh: '图片', en: 'Image' },
+                    productName: { zh: '产品名称', en: 'Product Name' },
+                    chineseName: { zh: '中文名称', en: 'Chinese Name' },
+                    actions: { zh: '操作', en: 'Actions' },
+                    edit: { zh: '编辑', en: 'Edit' },
+                    delete: { zh: '删除', en: 'Delete' },
+                    enterProductName: { zh: '输入产品名称', en: 'Enter product name' },
+                    enterChineseName: { zh: '输入中文名称 (可选)', en: 'Enter Chinese name (optional)' },
+                    enterPrice: { zh: '输入价格', en: 'Enter price' },
+                    enterUOM: { zh: '例如：1KG, 500G, 5PCS (可选)', en: 'E.g., 1KG, 500G, 5PCS (optional)' },
+                    notAuthorized: { zh: '未授权访问', en: 'Not Authorized' },
+                    redirectingToLogin: { zh: '您无权访问此页面。正在重定向到首页...', en: 'You are not authorized to access this page. Redirecting to home...' },
+                    back: { zh: '返回', en: 'Back' }
+                };
+                const t = (key) => translations[key]?.[currentLang.value] || key;
+
+                // --- Unit helpers ---
+                const extractChinesePart = (unit) => unit.split(' ')[0];
+                const extractEnglishPart = (unit) => {
+                    const match = unit.match(/\(([^)]+)\)/);
+                    return match ? match[1] : unit;
+                };
+                const getUnitDisplay = (unit) => {
+                    if (!unit) return '';
+                    const matching = unitOptions.value.find(u => extractChinesePart(u) === unit);
+                    if (matching) {
+                        return currentLang.value === 'en' ? extractEnglishPart(matching) : matching;
+                    }
+                    return unit;
+                };
+
                 // Auth check
                 const checkAuthStatus = (user) => {
                     if (user) {
@@ -228,28 +281,20 @@
                     }
                     isCheckingAuth.value = false;
                 };
-
-                // Back button
-                const goBack = () => {
-                    window.location.href = 'index.html';
-                };
-
-                // Language toggle
+                const goBack = () => { window.location.href = 'index.html'; };
                 const toggleLanguage = () => {
                     currentLang.value = currentLang.value === 'zh' ? 'en' : 'zh';
                     localStorage.setItem('preferred_language', currentLang.value);
                 };
-
-                // Handle image selection
                 const handleImageSelected = (event) => {
                     const file = event.target.files[0];
                     if (!file) return;
                     if (!file.type.match('image.*')) {
-                        message.value = { type: 'error', text: 'Please select an image file (JPEG, PNG, GIF)' };
+                        message.value = { type: 'error', text: t('noImageSelected') };
                         return;
                     }
                     if (file.size > 1 * 1024 * 1024) {
-                        message.value = { type: 'error', text: 'Image file size must be under 1MB. Please resize your image.' };
+                        message.value = { type: 'error', text: t('imageSizeInfo') };
                         return;
                     }
                     const reader = new FileReader();
@@ -259,15 +304,12 @@
                     };
                     reader.readAsDataURL(file);
                 };
-
-                // Fetch all products from global collection
                 const fetchProducts = async () => {
                     isLoading.value = true;
                     const snapshot = await getDocs(collection(db, 'products'));
                     products.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     isLoading.value = false;
                 };
-
                 onMounted(() => {
                     onAuthStateChanged(auth, (user) => {
                         checkAuthStatus(user);
@@ -280,11 +322,9 @@
                         currentLang.value = savedLang;
                     }
                 });
-
-                // Add or update product
                 const submitForm = async () => {
                     if (!productName.value) {
-                        message.value = { type: 'error', text: 'Please enter a product name' };
+                        message.value = { type: 'error', text: t('enterProductName') };
                         return;
                     }
                     isSubmitting.value = true;
@@ -292,7 +332,7 @@
                         name: productName.value,
                         cname: productChineseName.value,
                         price: parseFloat(productPrice.value) || 0,
-                        unit: productUnit.value,
+                        unit: extractChinesePart(productUnit.value), // Only Chinese part
                         UOM: productUOM.value,
                         stock: parseInt(productStock.value, 10) || 0,
                         imageData: imageData.value
@@ -300,41 +340,37 @@
                     try {
                         if (isEditing.value && editingProductId.value) {
                             await updateDoc(doc(db, 'products', editingProductId.value), data);
-                            message.value = { type: 'success', text: 'Product updated.' };
+                            message.value = { type: 'success', text: t('updateProduct') };
                         } else {
                             await addDoc(collection(db, 'products'), data);
-                            message.value = { type: 'success', text: 'Product added.' };
+                            message.value = { type: 'success', text: t('addProduct') };
                         }
                         resetForm();
                         fetchProducts();
                     } catch (e) {
-                        message.value = { type: 'error', text: 'Failed to save product.' };
+                        message.value = { type: 'error', text: t('saving') };
                     }
                     isSubmitting.value = false;
                 };
-
-                // Edit product
                 const editProduct = (product) => {
                     isEditing.value = true;
                     editingProductId.value = product.id;
                     productName.value = product.name;
                     productChineseName.value = product.cname;
                     productPrice.value = product.price;
-                    productUnit.value = product.unit;
+                    // Find the matching unit option for display
+                    const matchingUnit = unitOptions.value.find(u => extractChinesePart(u) === product.unit);
+                    productUnit.value = matchingUnit || product.unit || '包 (PACK)';
                     productUOM.value = product.UOM;
                     productStock.value = product.stock;
                     imagePreview.value = product.imageData || product.image || '';
                     imageData.value = product.imageData || '';
                 };
-
-                // Delete product
                 const deleteProduct = async (product) => {
-                    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) return;
+                    if (!confirm(`${t('delete')}: ${product.name}?`)) return;
                     await deleteDoc(doc(db, 'products', product.id));
                     fetchProducts();
                 };
-
-                // Reset form
                 const resetForm = () => {
                     isEditing.value = false;
                     editingProductId.value = null;
@@ -348,8 +384,6 @@
                     imagePreview.value = '';
                     imageData.value = '';
                 };
-
-                // Filtered products
                 const filteredProducts = computed(() => {
                     if (!searchQuery.value) return products.value;
                     return products.value.filter(p =>
@@ -357,7 +391,6 @@
                         (p.cname && p.cname.includes(searchQuery.value))
                     );
                 });
-
                 return {
                     isAuthenticated,
                     isCheckingAuth,
@@ -387,7 +420,9 @@
                     editProduct,
                     deleteProduct,
                     resetForm,
-                    filteredProducts
+                    filteredProducts,
+                    t,
+                    getUnitDisplay
                 };
             }
         }).mount('#app');
