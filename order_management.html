@@ -805,17 +805,27 @@
                             y += 6;
                         });
                         
-                        // Find the highest order ID from related orders
-                        const highestOrderId = Math.max(...relatedOrders.map(order => {
-                            // Extract numeric part from order ID (e.g., "ORD-123" -> 123)
-                            const match = order.orderId?.match(/\d+/);
-                            return match ? parseInt(match[0]) : 0;
-                        }));
-                        
-                        // Date and invoice number
-                        const currentYear = new Date().getFullYear().toString().slice(-2);
-                        const formattedDate = formatDate(invoiceDate).replace(/\//g, '');
-                        const invoiceNumber = `${highestOrderId}/${formattedDate}`;
+                        // Find the highest order ID from related orders (use part after dash)
+                        const numericOrderIds = relatedOrders
+                            .map(order => {
+                                if (order.orderId && order.orderId.includes('-')) {
+                                    const parts = order.orderId.split('-');
+                                    const num = parseInt(parts[1], 10);
+                                    return !isNaN(num) ? num : null;
+                                }
+                                return null;
+                            })
+                            .filter(num => num !== null);
+
+                        let invoiceNumberPrefix;
+                        if (numericOrderIds.length > 0) {
+                            invoiceNumberPrefix = Math.max(...numericOrderIds);
+                        } else if (relatedOrders.length > 0) {
+                            invoiceNumberPrefix = relatedOrders[0].orderId || "UNKNOWN";
+                        } else {
+                            invoiceNumberPrefix = "UNKNOWN";
+                        }
+                        const invoiceNumber = `${invoiceNumberPrefix}/${formattedDate}`;
                         
                         doc.text(`DATE : ${formatDate(invoiceDate)}`, 140, addressStartY);
                         doc.text(`INVOICE NO : ${invoiceNumber}`, 140, addressStartY + 6);
