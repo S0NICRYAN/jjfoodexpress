@@ -546,6 +546,15 @@
                 <button class="retry-button" @click="retryLoading">Retry Loading</button>
             </div>
 
+            <!-- Image Zoom Modal -->
+            <div v-if="showZoomModal" class="zoom-modal" @click="handleModalClick">
+                <div class="zoom-modal-content">
+                    <div class="zoom-modal-close" @click="closeZoomModal">×</div>
+                    <img :src="zoomedImage.src" :alt="zoomedImage.alt" class="zoom-modal-image">
+                </div>
+                <div class="zoom-modal-title">{{ zoomedImage.name }}</div>
+            </div>
+
             <div class="products-container">
                 <!-- Loading indicator -->
                 <div v-if="isLoading" class="loading-container">
