@@ -52,7 +52,9 @@
                 const errorMessage = ref('');
                 const currentHour = new Date().getHours();
                 const currentMinutes = new Date().getMinutes();
+                const currentDay = new Date().getDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
                 const isAfterCutoff = (currentHour > 16 || (currentHour === 16 && currentMinutes >= 30));
+                const isSunday = currentDay === 0;
                 const dateError = ref('');
                 const currentLang = ref('zh'); // Default to Chinese
                 const referringPage = ref('index.html'); // Default referring page
@@ -169,12 +171,37 @@
                     const now = new Date();
                     const currentHour = now.getHours();
                     const currentMinutes = now.getMinutes();
+                    const currentDay = now.getDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
                     
-                    // If time is 4:30 PM or later, delivery date should be 2 days later
-                    const daysToAdd = (currentHour > 16 || (currentHour === 16 && currentMinutes >= 30)) ? 2 : 1;
+                    // Calculate initial delivery date
+                    let deliveryDate = new Date();
                     
-                    const deliveryDate = new Date();
-                    deliveryDate.setDate(deliveryDate.getDate() + daysToAdd);
+                    // Handle Friday after 4:30 PM specially
+                    if (currentDay === 5 && (currentHour > 16 || (currentHour === 16 && currentMinutes >= 30))) {
+                        // For Friday after 4:30 PM, deliver on Monday
+                        deliveryDate.setDate(deliveryDate.getDate() + 3);
+                    }
+                    // Handle Saturday specially
+                    else if (currentDay === 6) {
+                        // For Saturday, deliver on Monday
+                        deliveryDate.setDate(deliveryDate.getDate() + 2);
+                    }
+                    // Handle Sunday specially
+                    else if (currentDay === 0) {
+                        // For Sunday, deliver on Tuesday
+                        deliveryDate.setDate(deliveryDate.getDate() + 2);
+                    }
+                    // Handle all other days
+                    else {
+                        // If time is 4:30 PM or later, delivery date should be 2 days later
+                        const daysToAdd = (currentHour > 16 || (currentHour === 16 && currentMinutes >= 30)) ? 2 : 1;
+                        deliveryDate.setDate(deliveryDate.getDate() + daysToAdd);
+                        
+                        // If the calculated date falls on Sunday, add one more day
+                        if (deliveryDate.getDay() === 0) {
+                            deliveryDate.setDate(deliveryDate.getDate() + 1);
+                        }
+                    }
                     
                     // Format for input type="date" needs to be YYYY-MM-DD
                     const year = deliveryDate.getFullYear();
@@ -370,6 +397,12 @@
                 /* Submit order to Firestore and send email */
                 async function submitOrder() {
                     if (isSubmitting.value) return;
+                    
+                    // Check if it's Sunday
+                    if (isSunday) {
+                        errorMessage.value = '周日不接受订单。请在工作日下单。/ Orders are not accepted on Sundays. Please place your order on a weekday.';
+                        return;
+                    }
                     
                     // First validate the delivery date
                     if (!validateDeliveryDate()) {
@@ -597,129 +630,139 @@
             
             <!-- Order preview content -->
             <div v-if="!isSubmitSuccess && !errorMessage" class="content-inner">
-                <!-- Updated outlet info section to include address -->
-                <div class="outlet-info">
-                    <div class="outlet-name">{{ outletName }}</div>
-                    <div class="outlet-address" v-if="outletAddress">{{ outletAddress }}</div>
+                <!-- Sunday message -->
+                <div v-if="isSunday" class="sunday-message">
+                    <h2>周日休息 / Sunday Closed</h2>
+                    <p>周日不接受订单。请在工作日下单。/ Orders are not accepted on Sundays. Please place your order on a weekday.</p>
+                    <button class="btn" @click="cancelOrder">{{ t('returnHome') }}</button>
                 </div>
                 
-                <!-- Editable note -->
-                <div class="note-box">
-                    <p><strong>{{ t('note') }}:</strong> {{ t('noteContent') }}</p>
-                </div>
-                
-                <!-- Order items table -->
-                <div class="responsive-table">
-                    <table class="order-items">
-                        <thead>
-                            <tr>
-                                <th>{{ t('product') }}</th>
-                                <th>{{ t('unitPrice') }}</th>
-                                <th>{{ t('quantity') }}</th>
-                                <th>{{ t('total') }}</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(item, index) in orderItems" :key="item.id">
-                                <td>
-                                    <div class="product-info">
-                                        <img :src="item.image || '/api/placeholder/80/80'" :alt="item.name" class="product-image">
-                                        <div class="product-details">
-                                            <h3>{{ item.name }}</h3>
-                                            <p>{{ item.chinese }}</p>
-                                            <p v-if="item.UOM">{{item.UOM}}</p>
+                <!-- Regular order form (hidden on Sunday) -->
+                <div v-else>
+                    <!-- Updated outlet info section to include address -->
+                    <div class="outlet-info">
+                        <div class="outlet-name">{{ outletName }}</div>
+                        <div class="outlet-address" v-if="outletAddress">{{ outletAddress }}</div>
+                    </div>
+                    
+                    <!-- Editable note -->
+                    <div class="note-box">
+                        <p><strong>{{ t('note') }}:</strong> {{ t('noteContent') }}</p>
+                    </div>
+                    
+                    <!-- Order items table -->
+                    <div class="responsive-table">
+                        <table class="order-items">
+                            <thead>
+                                <tr>
+                                    <th>{{ t('product') }}</th>
+                                    <th>{{ t('unitPrice') }}</th>
+                                    <th>{{ t('quantity') }}</th>
+                                    <th>{{ t('total') }}</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in orderItems" :key="item.id">
+                                    <td>
+                                        <div class="product-info">
+                                            <img :src="item.image || '/api/placeholder/80/80'" :alt="item.name" class="product-image">
+                                            <div class="product-details">
+                                                <h3>{{ item.name }}</h3>
+                                                <p>{{ item.chinese }}</p>
+                                                <p v-if="item.UOM">{{item.UOM}}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                                <td class="price-cell">${{ formatCurrency(item.price || 0) }}</td>
-                                <td class="quantity-cell">
-                                    <div class="qty-controls">
-                                        <button class="qty-btn" @click="updateQuantity(item, item.quantity - 1)">-</button>
-                                        <input 
-                                            type="number" 
-                                            class="qty-input" 
-                                            v-model.number="item.quantity" 
-                                            min="1" 
-                                            @change="updateQuantity(item, item.quantity)"
-                                        >
-                                        <button class="qty-btn" @click="updateQuantity(item, item.quantity + 1)">+</button>
-                                    </div>
-                                </td>
-                                <td class="total-cell">${{ formatCurrency(item.subtotal || 0) }}</td>
-                                <td class="action-cell">
-                                    <button class="remove-item" @click="removeItem(index)">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
-                                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
-                                        </svg>
-                                        {{ t('remove') }}
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Order summary -->
-                <div class="order-summary">
-                    <div class="summary-row">
-                        <span>{{ t('subtotal') }}:</span>
-                        <span>$ {{ formatCurrency(subTotal) }}</span>
+                                    </td>
+                                    <td class="price-cell">${{ formatCurrency(item.price || 0) }}</td>
+                                    <td class="quantity-cell">
+                                        <div class="qty-controls">
+                                            <button class="qty-btn" @click="updateQuantity(item, item.quantity - 1)">-</button>
+                                            <input 
+                                                type="number" 
+                                                class="qty-input" 
+                                                v-model.number="item.quantity" 
+                                                min="1" 
+                                                @change="updateQuantity(item, item.quantity)"
+                                            >
+                                            <button class="qty-btn" @click="updateQuantity(item, item.quantity + 1)">+</button>
+                                        </div>
+                                    </td>
+                                    <td class="total-cell">${{ formatCurrency(item.subtotal || 0) }}</td>
+                                    <td class="action-cell">
+                                        <button class="remove-item" @click="removeItem(index)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                            </svg>
+                                            {{ t('remove') }}
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="summary-row">
-                        <span>{{ t('gst') }}:</span>
-                        <span>$ {{ formatCurrency(gst) }}</span>
-                    </div>
-                    <div class="summary-row grand-total">
-                        <span>{{ t('grandTotal') }}:</span>
-                        <span>$ {{ formatCurrency(grandTotal) }}</span>
-                    </div>
-                </div>
-                
-                <!-- Delivery information -->
-                <div class="delivery-info">
-                    <div class="form-group">
-                        <label for="delivery-date">{{ t('deliveryDate') }}:</label>
-                        <input 
-                            type="date" 
-                            id="delivery-date" 
-                            class="form-control" 
-                            v-model="deliveryDate" 
-                            readonly
-                            disabled
-                        >
-                        <div class="form-note" v-if="isAfterCutoff">
-                            {{ t('afterCutoff') }}
+                    
+                    <!-- Order summary -->
+                    <div class="order-summary">
+                        <div class="summary-row">
+                            <span>{{ t('subtotal') }}:</span>
+                            <span>$ {{ formatCurrency(subTotal) }}</span>
                         </div>
-                        <div class="form-note" v-else>
-                            {{ t('beforeCutoff') }}
+                        <div class="summary-row">
+                            <span>{{ t('gst') }}:</span>
+                            <span>$ {{ formatCurrency(gst) }}</span>
+                        </div>
+                        <div class="summary-row grand-total">
+                            <span>{{ t('grandTotal') }}:</span>
+                            <span>$ {{ formatCurrency(grandTotal) }}</span>
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="remarks">{{ t('remarks') }}:</label>
-                        <textarea id="remarks" class="form-control" v-model="remarks" rows="4" :placeholder="t('enterRemarks')"></textarea>
+                    <!-- Delivery information -->
+                    <div class="delivery-info">
+                        <div class="form-group">
+                            <label for="delivery-date">{{ t('deliveryDate') }}:</label>
+                            <input 
+                                type="date" 
+                                id="delivery-date" 
+                                class="form-control" 
+                                v-model="deliveryDate" 
+                                readonly
+                                disabled
+                            >
+                            <div class="form-note" v-if="isAfterCutoff">
+                                {{ t('afterCutoff') }}
+                            </div>
+                            <div class="form-note" v-else>
+                                {{ t('beforeCutoff') }}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="remarks">{{ t('remarks') }}:</label>
+                            <textarea id="remarks" class="form-control" v-model="remarks" rows="4" :placeholder="t('enterRemarks')"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="reference">{{ t('referenceNumber') }}:</label>
+                            <input type="text" id="reference" class="form-control" v-model="referenceNumber" :placeholder="t('enterReference')">
+                            <div class="form-note">{{ t('optional') }}</div>
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="reference">{{ t('referenceNumber') }}:</label>
-                        <input type="text" id="reference" class="form-control" v-model="referenceNumber" :placeholder="t('enterReference')">
-                        <div class="form-note">{{ t('optional') }}</div>
+                    <!-- Confirmation notes -->
+                    <div class="confirm-note">
+                        <p>{{ t('confirm') }}</p>
                     </div>
-                </div>
-                
-                <!-- Confirmation notes -->
-                <div class="confirm-note">
-                    <p>{{ t('confirm') }}</p>
-                </div>
-                
-                <!-- Action buttons -->
-                <div class="action-buttons">
-                    <button class="btn btn-cancel" @click="cancelOrder">{{ t('cancel') }}</button>
-                    <button class="btn btn-submit" @click="submitOrder" :disabled="isSubmitting">
-                        {{ isSubmitting ? t('submitting') : t('submit') }}
-                    </button>
+                    
+                    <!-- Action buttons -->
+                    <div class="action-buttons">
+                        <button class="btn btn-cancel" @click="cancelOrder">{{ t('cancel') }}</button>
+                        <button class="btn btn-submit" @click="submitOrder" :disabled="isSubmitting">
+                            {{ isSubmitting ? t('submitting') : t('submit') }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
