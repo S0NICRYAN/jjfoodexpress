@@ -234,6 +234,15 @@
                     // Ensure quantity is not negative
                     if (value < 0) value = 0;
                     
+                    // If quantity is 0, remove the item
+                    if (value === 0) {
+                        const index = orderItems.value.indexOf(item);
+                        if (index > -1) {
+                            removeItem(index);
+                            return;
+                        }
+                    }
+                    
                     // Update the quantity
                     item.quantity = value;
                     
