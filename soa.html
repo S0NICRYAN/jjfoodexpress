@@ -520,7 +520,8 @@
                         summaries[dateKey].dailyAmount += order.grandTotal || 0;
                         summaries[dateKey].orders.push(order);
                     });
-                    return Object.values(summaries).sort((a, b) => new Date(b.date) - new Date(a.date));
+                    return Object.values(summaries)
+                        .sort((a, b) => new Date(a.date) - new Date(b.date));
                 }
             },
             methods: {
@@ -573,26 +574,79 @@
                 async exportToPDF() {
                     const { jsPDF } = window.jspdf;
                     const doc = new jsPDF();
+                    let y = 20;
 
-                    // Company details
-                    doc.setFontSize(20);
-                    doc.text('SHIAWASE (S) PTE LTD', 20, 20);
+                    // Centered company header
+                    doc.setFontSize(18);
+                    doc.text('SHIAWASE (S) PTE LTD', 105, y, { align: 'center' });
+                    y += 10;
+                    doc.setFontSize(10);
+                    doc.text('5 Mandai Link #09-06 Mandai Food Link Singapore 728654', 105, y, { align: 'center' });
+                    y += 6;
+                    doc.text('Tel: (65) 6570 9171', 105, y, { align: 'center' });
+                    y += 6;
+                    doc.text('GST REGISTRATION NO. 201015007Z', 105, y, { align: 'center' });
+                    y += 10;
+
+                    // Centered title
                     doc.setFontSize(12);
-                    doc.text('Statement of Account', 20, 30);
-                    
-                    // Outlet and period details
-                    const outlet = this.outlets.find(o => o.id === this.selectedOutlet);
-                    doc.text(`Bill To: ${outlet?.name || ''}`, 20, 45);
-                    doc.text(`Period: ${this.selectedMonth}`, 20, 50);
-                    doc.text('Note: Orders after 4:30 PM are counted for the next day', 20, 55);
+                    doc.text('STATEMENT OF ACCOUNT', 105, y, { align: 'center' });
+                    y += 10;
 
-                    // Calculate running balance
+                    // Left-aligned outlet info
+                    doc.setFontSize(10);
+                    const outlet = this.outlets.find(o => o.id === this.selectedOutlet);
+                    doc.text('DELIVER TO :', 20, y);
+                    y += 5;
+                    if (outlet?.name) {
+                        doc.text(outlet.name, 20, y);
+                        y += 5;
+                    }
+                    if (outlet?.address) {
+                        const addressLines = doc.splitTextToSize(outlet.address, 90);
+                        addressLines.forEach(line => {
+                            doc.text(line, 20, y);
+                            y += 5;
+                        });
+                    }
+                    const formattedNextMonthDate = new Date(new Date(this.selectedMonth).getFullYear(), new Date(this.selectedMonth).getMonth() + 1, 0).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    doc.text(`DATE : ${formattedNextMonthDate}`, 20, y);
+                    y += 5;
+                    doc.text('Note: Orders after 4:30 PM are counted for the next day', 20, y);
+                    y += 8;
+
+                    // Calculate running balance and tableRows as before
                     let runningBalance = 0;
                     const tableRows = this.dailySummaries.map(summary => {
+                        // Find the highest order number for the day
+                        const numericOrderIds = summary.orders
+                            .map(order => {
+                                const oid = order.orderId || order.id || '';
+                                if (oid && oid.includes('-')) {
+                                    const parts = oid.split('-');
+                                    const num = parseInt(parts[1], 10);
+                                    return !isNaN(num) ? num : null;
+                                }
+                                const num = parseInt(oid, 10);
+                                return !isNaN(num) ? num : null;
+                            })
+                            .filter(num => num !== null);
+                        let invoiceNumberPrefix;
+                        if (numericOrderIds.length > 0) {
+                            invoiceNumberPrefix = Math.max(...numericOrderIds);
+                        } else if (summary.orders.length > 0) {
+                            const firstOrderId = summary.orders[0].orderId || summary.orders[0].id || '';
+                            const numericPart = firstOrderId.replace(/[^0-9]/g, '');
+                            invoiceNumberPrefix = numericPart || '0001';
+                        } else {
+                            invoiceNumberPrefix = '0001';
+                        }
+                        const dateStr = summary.date.toISOString().split('T')[0].replace(/-/g, '');
+                        const invoiceNumber = `${invoiceNumberPrefix}/${dateStr}`;
                         runningBalance += summary.dailyAmount;
                         return [
                             this.formatDate(summary.date),
-                            `INV-${summary.date.toISOString().split('T')[0].replace(/-/g, '')}`,
+                            invoiceNumber,
                             `$${summary.dailyAmount.toFixed(2)}`,
                             '$0.00',
                             `$${runningBalance.toFixed(2)}`
@@ -612,16 +666,20 @@
                     doc.autoTable({
                         head: [['Date', 'Invoice Number', 'Debit', 'Credit', 'Balance']],
                         body: tableRows,
-                        startY: 65,
-                        theme: 'grid',
+                        startY: y,
+                        theme: 'plain',
                         styles: {
                             fontSize: 10,
                             cellPadding: 5,
+                            textColor: 20,
+                            lineColor: 20,
+                            lineWidth: 0.1
                         },
                         headStyles: {
-                            fillColor: [26, 60, 110], // #1a3c6e
-                            textColor: 255,
-                            fontStyle: 'bold'
+                            fontStyle: 'bold',
+                            textColor: 20,
+                            lineColor: 20,
+                            lineWidth: 0.1
                         },
                         columnStyles: {
                             0: { cellWidth: 30 },
@@ -631,12 +689,12 @@
                             4: { cellWidth: 30, halign: 'right' }
                         },
                         footStyles: {
-                            fillColor: [26, 60, 110],
-                            textColor: 255,
-                            fontStyle: 'bold'
+                            fontStyle: 'bold',
+                            textColor: 20,
+                            lineColor: 20,
+                            lineWidth: 0.1
                         },
                         didDrawPage: function(data) {
-                            // Add statements at the bottom of each page
                             const pageHeight = doc.internal.pageSize.height;
                             doc.setFontSize(8);
                             doc.text('1. All prices are subjected to changes without prior notice', 20, pageHeight - 30);
