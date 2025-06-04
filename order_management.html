@@ -718,7 +718,8 @@
                             ordersRef,
                             where('outletId', '==', order.outletId),
                             where('createdAt', '>=', new Date(invoiceDateStr)),
-                            where('createdAt', '<', new Date(nextDayStr))
+                            where('createdAt', '<', new Date(nextDayStr)),
+                            where('status', 'in', ['processing', 'delivered'])
                         );
                         
                         const snapshot = await getDocs(q);
@@ -732,6 +733,12 @@
                                 createdAt: data.createdAt
                             });
                         });
+
+                        // If no valid orders found, show message and return
+                        if (relatedOrders.length === 0) {
+                            alert('No valid orders found for this date. Only processing and delivered orders can be included in invoices.');
+                            return;
+                        }
                         
                         // Combine items from all orders
                         const combinedItems = {};
