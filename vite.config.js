@@ -19,7 +19,7 @@ export default defineConfig({
       input: {
         main: 'index.html',
         order: 'order.html',
-        product: 'product.html',
+        inventory: 'inventory.html',
         preview: 'preview.html',
         history: 'history.html',
         outlet_management: 'outlet_management.html',
