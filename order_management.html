@@ -591,14 +591,22 @@
                 const formatDate = (timestamp) => {
                     if (!timestamp) return '-';
                     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-                    return date.toLocaleDateString(currentLang.value === 'zh' ? 'zh-CN' : 'en-US');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const year = date.getFullYear();
+                    return `${day}/${month}/${year}`;
                 };
                 
                 // Format date and time
                 const formatDateTime = (timestamp) => {
                     if (!timestamp) return '-';
                     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-                    return date.toLocaleString(currentLang.value === 'zh' ? 'zh-CN' : 'en-US');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const year = date.getFullYear();
+                    const hours = date.getHours().toString().padStart(2, '0');
+                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                    return `${day}/${month}/${year} ${hours}:${minutes}`;
                 };
                 
                 // Get status class
@@ -683,15 +691,76 @@
                     selectedOrder.value = null;
                 };
                 
-                // Fallback PDF function - English only but guaranteed to work
-                const downloadPDF = () => {
+                // Download PDF with cutoff time logic
+                const downloadPDF = async () => {
                     if (!selectedOrder.value) return;
                     
                     try {
+                        const order = selectedOrder.value;
+                        const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+                        const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes(); // Convert to minutes
+                        const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
+                        
+                        // Determine which date to use for invoice
+                        let invoiceDate = new Date(orderDate);
+                        if (orderTime > cutoffTime) {
+                            // If order is after 4:30 PM, use next day
+                            invoiceDate.setDate(invoiceDate.getDate() + 1);
+                        }
+                        
+                        // Format date for query
+                        const invoiceDateStr = invoiceDate.toISOString().split('T')[0];
+                        const nextDayStr = new Date(invoiceDate.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                        
+                        // Fetch all orders for the same outlet on the invoice date
+                        const ordersRef = collection(db, 'orders');
+                        const q = query(
+                            ordersRef,
+                            where('outletId', '==', order.outletId),
+                            where('createdAt', '>=', new Date(invoiceDateStr)),
+                            where('createdAt', '<', new Date(nextDayStr))
+                        );
+                        
+                        const snapshot = await getDocs(q);
+                        const relatedOrders = [];
+                        
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            relatedOrders.push({
+                                id: doc.id,
+                                ...data,
+                                createdAt: data.createdAt
+                            });
+                        });
+                        
+                        // Combine items from all orders
+                        const combinedItems = {};
+                        let totalSubtotal = 0;
+                        
+                        relatedOrders.forEach(order => {
+                            if (order.items) {
+                                Object.values(order.items).forEach(item => {
+                                    const key = `${item.name}_${item.unit}`;
+                                    if (!combinedItems[key]) {
+                                        combinedItems[key] = {
+                                            name: item.name,
+                                            unit: item.unit,
+                                            unitChinese: item.unitChinese,
+                                            quantity: 0,
+                                            price: item.price,
+                                            subtotal: 0
+                                        };
+                                    }
+                                    combinedItems[key].quantity += item.quantity;
+                                    combinedItems[key].subtotal += item.subtotal;
+                                    totalSubtotal += item.subtotal;
+                                });
+                            }
+                        });
+                        
+                        // Generate PDF
                         const { jsPDF } = window.jspdf;
                         const doc = new jsPDF();
-                        const order = selectedOrder.value;
-                        
                         let y = 20;
                         
                         // Company header
@@ -725,13 +794,21 @@
                             y += 6;
                         });
                         
+                        // Find the highest order ID from related orders
+                        const highestOrderId = Math.max(...relatedOrders.map(order => {
+                            // Extract numeric part from order ID (e.g., "ORD-123" -> 123)
+                            const match = order.orderId?.match(/\d+/);
+                            return match ? parseInt(match[0]) : 0;
+                        }));
+                        
                         // Date and invoice number
                         const currentYear = new Date().getFullYear().toString().slice(-2);
-                        const invoiceNumber = `${order.orderNumber || order.orderId}/${currentYear}`;
+                        const formattedDate = formatDate(invoiceDate).replace(/\//g, '');
+                        const invoiceNumber = `${highestOrderId}/${formattedDate}`;
                         
-                        doc.text(`DATE : ${formatDate(order.createdAt)}`, 140, addressStartY);
+                        doc.text(`DATE : ${formatDate(invoiceDate)}`, 140, addressStartY);
                         doc.text(`INVOICE NO : ${invoiceNumber}`, 140, addressStartY + 6);
-                        
+                        doc.text(`Orders Included: ${relatedOrders.length}`, 140, addressStartY + 12);
                         
                         // Items table
                         y += 15;
@@ -754,7 +831,7 @@
                         y += 8;
                         
                         // Table rows
-                        const items = order.items || [];
+                        const items = Object.values(combinedItems);
                         items.forEach((item, index) => {
                             x = 20;
                             
@@ -763,7 +840,7 @@
                                 y = 20;
                             }
                             
-                            const uomValue = item.UOM || item.unitChinese || '';
+                            const uomValue = item.unitChinese || item.unit || '';
                             
                             // Convert Chinese characters to placeholder for now
                             let itemName = item.name || '';
@@ -795,18 +872,18 @@
                         const totalsX = 120;
                         
                         doc.text('TOTAL', totalsX, y);
-                        doc.text(`${(order.subTotal || 0).toFixed(2)}`, 170, y, { align: 'right' });
+                        doc.text(`${totalSubtotal.toFixed(2)}`, 170, y, { align: 'right' });
                         y += 6;
                         
                         doc.text('ADD GST@9%', totalsX, y);
-                        doc.text(`${((order.subTotal || 0) * 0.09).toFixed(2)}`, 170, y, { align: 'right' });
+                        doc.text(`${(totalSubtotal * 0.09).toFixed(2)}`, 170, y, { align: 'right' });
                         y += 6;
                         
                         doc.setFontSize(12);
                         doc.text('TOTAL DUE IN S$', totalsX, y);
-                        doc.text(`${(order.grandTotal || 0).toFixed(2)}`, 170, y, { align: 'right' });
+                        doc.text(`${(totalSubtotal * 1.09).toFixed(2)}`, 170, y, { align: 'right' });
                         
-                        // Signature section - English only
+                        // Signature section
                         y += 20;
                         doc.setFontSize(10);
                         
@@ -823,26 +900,20 @@
                         y += 12;
                         doc.text('Prepared by: _________________', leftColumnX, y);
                         
-                        // Remarks
-                        if (order.remarks) {
-                            y += 15;
-                            doc.text('Remarks:', 20, y);
+                        // Order references
+                        y += 15;
+                        doc.text('Order References:', 20, y);
+                        y += 6;
+                        
+                        const orderRefs = relatedOrders.map(o => o.orderId).join(', ');
+                        const refLines = doc.splitTextToSize(orderRefs, 160);
+                        refLines.forEach(line => {
+                            doc.text(line, 20, y);
                             y += 6;
-                            
-                            let remarksText = order.remarks;
-                            if (/[\u4e00-\u9fff]/.test(remarksText)) {
-                                remarksText = '[Contains Chinese characters - see original order]';
-                            }
-                            
-                            const remarkLines = doc.splitTextToSize(remarksText, 160);
-                            remarkLines.forEach(line => {
-                                doc.text(line, 20, y);
-                                y += 6;
-                            });
-                        }
+                        });
                         
                         // Save PDF
-                        doc.save(`Invoice_${order.orderId}.pdf`);
+                        doc.save(`Invoice_${order.outletId}_${formatDate(invoiceDate).replace(/\//g, '')}.pdf`);
                     } catch (error) {
                         alert('Failed to generate PDF: ' + error.message);
                     }
