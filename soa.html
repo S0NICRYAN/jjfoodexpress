@@ -596,7 +596,8 @@
                     // Left-aligned outlet info
                     doc.setFontSize(10);
                     const outlet = this.outlets.find(o => o.id === this.selectedOutlet);
-                    let deliverToLine = 'BILL TO :';
+                    let deliverToLine = 'DELIVER TO :';
+                    if (outlet?.name) deliverToLine += ' ' + outlet.name;
                     // Calculate the 1st of the next month
                     const [year, month] = this.selectedMonth.split('-');
                     let nextMonth = parseInt(month, 10) + 1;
@@ -623,30 +624,37 @@
                     // Calculate running balance and tableRows as before
                     let runningBalance = 0;
                     const tableRows = this.dailySummaries.map(summary => {
-                        // Find the highest order number for the day
-                        const numericOrderIds = summary.orders
-                            .map(order => {
-                                const oid = order.orderId || order.id || '';
-                                if (oid && oid.includes('-')) {
-                                    const parts = oid.split('-');
-                                    const num = parseInt(parts[1], 10);
-                                    return !isNaN(num) ? num : null;
-                                }
-                                const num = parseInt(oid, 10);
-                                return !isNaN(num) ? num : null;
-                            })
-                            .filter(num => num !== null);
-                        let invoiceNumberPrefix;
-                        if (numericOrderIds.length > 0) {
-                            invoiceNumberPrefix = Math.max(...numericOrderIds);
-                        } else if (summary.orders.length > 0) {
-                            const firstOrderId = summary.orders[0].orderId || summary.orders[0].id || '';
-                            const numericPart = firstOrderId.replace(/[^0-9]/g, '');
-                            invoiceNumberPrefix = numericPart || '0001';
-                        } else {
-                            invoiceNumberPrefix = '0001';
+                        // Find the order with the highest order number for the day
+                        let maxOrder = null;
+                        let maxOrderNum = -1;
+                        summary.orders.forEach(order => {
+                            const oid = order.orderId || order.id || '';
+                            let num = null;
+                            if (oid && oid.includes('-')) {
+                                const parts = oid.split('-');
+                                num = parseInt(parts[1], 10);
+                            } else {
+                                num = parseInt(oid, 10);
+                            }
+                            if (!isNaN(num) && num > maxOrderNum) {
+                                maxOrderNum = num;
+                                maxOrder = order;
+                            }
+                        });
+                        let invoiceNumberPrefix = maxOrderNum !== -1 ? maxOrderNum : '0001';
+                        // Use effective date of the max order for invoice number date part
+                        let invoiceDate = summary.date;
+                        if (maxOrder && maxOrder.createdAt) {
+                            let d = maxOrder.createdAt.toDate ? maxOrder.createdAt.toDate() : new Date(maxOrder.createdAt);
+                            const orderTime = d.getHours() * 60 + d.getMinutes();
+                            const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
+                            if (orderTime > cutoffTime) {
+                                d = new Date(d.getTime());
+                                d.setDate(d.getDate() + 1);
+                            }
+                            invoiceDate = d;
                         }
-                        const dateStr = summary.date.toISOString().split('T')[0].replace(/-/g, '');
+                        const dateStr = `${String(invoiceDate.getDate()).padStart(2, '0')}${String(invoiceDate.getMonth() + 1).padStart(2, '0')}${invoiceDate.getFullYear()}`;
                         const invoiceNumber = `${invoiceNumberPrefix}/${dateStr}`;
                         runningBalance += summary.dailyAmount;
                         return [
