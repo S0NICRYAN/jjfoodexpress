@@ -490,23 +490,20 @@
             },
             computed: {
                 totalAmount() {
-                    return this.orders.reduce((sum, order) => sum + order.totalAmount, 0);
+                    return this.orders.reduce((sum, order) => sum + (order.grandTotal || 0), 0);
                 },
                 dailySummaries() {
                     const summaries = {};
-                    
                     this.orders.forEach(order => {
                         // Get order time in minutes since midnight
-                        const orderDate = new Date(order.date);
+                        const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
                         const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes();
                         const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
-                        
                         // If order is after 4:30 PM, use next day
                         let effectiveDate = new Date(orderDate);
                         if (orderTime > cutoffTime) {
                             effectiveDate.setDate(effectiveDate.getDate() + 1);
                         }
-                        
                         const dateKey = effectiveDate.toDateString();
                         if (!summaries[dateKey]) {
                             summaries[dateKey] = {
@@ -517,13 +514,11 @@
                                 orders: [] // Store orders for this day
                             };
                         }
-                        
                         summaries[dateKey].orderCount++;
-                        summaries[dateKey].totalItems += order.items.length;
-                        summaries[dateKey].dailyAmount += order.totalAmount;
+                        summaries[dateKey].totalItems += order.items ? order.items.length : 0;
+                        summaries[dateKey].dailyAmount += order.grandTotal || 0;
                         summaries[dateKey].orders.push(order);
                     });
-                    
                     return Object.values(summaries).sort((a, b) => new Date(b.date) - new Date(a.date));
                 }
             },
@@ -545,21 +540,22 @@
 
                     const [year, month] = this.selectedMonth.split('-');
                     const startDate = new Date(year, month - 1, 1);
-                    const endDate = new Date(year, month, 0);
+                    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
                     const ordersRef = collection(db, 'orders');
                     const q = query(
                         ordersRef,
-                        where('outletId', '==', this.selectedOutlet),
-                        where('date', '>=', startDate),
-                        where('date', '<=', endDate)
+                        where('outletId', '==', this.selectedOutlet)
                     );
 
                     const querySnapshot = await getDocs(q);
-                    this.orders = querySnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
+                    this.orders = querySnapshot.docs
+                        .map(doc => ({ id: doc.id, ...doc.data() }))
+                        .filter(order => {
+                            if (!order.createdAt) return false;
+                            const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+                            return orderDate >= startDate && orderDate <= endDate;
+                        });
                 },
                 async fetchOutlets() {
                     const outletsRef = collection(db, 'outlets');
