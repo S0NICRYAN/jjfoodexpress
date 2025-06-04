@@ -596,7 +596,20 @@
                     // Left-aligned outlet info
                     doc.setFontSize(10);
                     const outlet = this.outlets.find(o => o.id === this.selectedOutlet);
-                    doc.text('BILL TO :', 20, y);
+                    let deliverToLine = 'DELIVER TO :';
+                    if (outlet?.name) deliverToLine += ' ' + outlet.name;
+                    // Calculate the 1st of the next month
+                    const [year, month] = this.selectedMonth.split('-');
+                    let nextMonth = parseInt(month, 10) + 1;
+                    let nextYear = parseInt(year, 10);
+                    if (nextMonth > 12) {
+                        nextMonth = 1;
+                        nextYear += 1;
+                    }
+                    const nextMonthDate = new Date(nextYear, nextMonth - 1, 1);
+                    const formattedNextMonthDate = `${String(nextMonthDate.getDate()).padStart(2, '0')}/${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}/${nextMonthDate.getFullYear()}`;
+                    doc.text(deliverToLine, 20, y);
+                    doc.text(`DATE : ${formattedNextMonthDate}`, 200 - 20, y, { align: 'right' });
                     y += 5;
                     if (outlet?.address) {
                         const addressLines = doc.splitTextToSize(outlet.address, 90);
@@ -605,9 +618,6 @@
                             y += 5;
                         });
                     }
-                    const formattedNextMonthDate = new Date(new Date(this.selectedMonth).getFullYear(), new Date(this.selectedMonth).getMonth() + 1, 0).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                    doc.text(`DATE : ${formattedNextMonthDate}`, 20, y);
-                    y += 5;
                     doc.text('Note: Orders after 4:30 PM are counted for the next day', 20, y);
                     y += 8;
 
@@ -644,7 +654,7 @@
                             this.formatDate(summary.date),
                             invoiceNumber,
                             `$${summary.dailyAmount.toFixed(2)}`,
-                            '$0.00',
+                            '', // Credit column left empty
                             `$${runningBalance.toFixed(2)}`
                         ];
                     });
@@ -654,7 +664,7 @@
                         'Total',
                         '',
                         `$${this.totalAmount.toFixed(2)}`,
-                        '$0.00',
+                        '',
                         `$${this.totalAmount.toFixed(2)}`
                     ]);
 
