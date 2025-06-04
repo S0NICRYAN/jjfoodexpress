@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statement of Account - SHIAWASE (S) PTE LTD</title>
+    <link rel="stylesheet" href="product.css">
+    <!-- Vue 3 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-font-asian@0.0.3/dist/SimSun-normal.js"></script>
+    <style>
+        .soa-container {
+            padding: 20px;
+        }
+
+        .filters-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .filter-group {
+            flex: 1;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #1a3c6e;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .summary-card h3 {
+            margin: 0 0 10px 0;
+            color: #1a3c6e;
+            font-size: 1rem;
+        }
+
+        .summary-card .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .orders-table th,
+        .orders-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .orders-table th {
+            background: #1a3c6e;
+            color: white;
+            font-weight: 600;
+        }
+
+        .orders-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .export-btn {
+            background: #1a3c6e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        .export-btn:hover {
+            background: #152d54;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
+                </div>
+                <div class="header-actions">
+                    <div v-if="isAuthenticated" class="user-info">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                        </svg>
+                        {{ userEmail }}
+                    </div>
+                    <button class="back-btn" @click="goBack">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                        </svg>
+                        {{ t('back') || 'Back' }}
+                    </button>
+                    <button class="language-toggle" @click="toggleLanguage">
+                        {{ currentLang === 'zh' ? 'English' : '中文' }}
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <div v-if="isCheckingAuth" class="auth-loading">
+                <div class="loading-spinner"></div>
+                <p>{{ t('checkingAuth') || 'Checking authentication...' }}</p>
+            </div>
+
+            <div v-else-if="isAuthenticated" class="soa-container">
+                <h1>{{ t('statementOfAccount') || 'Statement of Account' }}</h1>
+
+                <div class="filters-section">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label>{{ t('selectMonth') || 'Select Month' }}</label>
+                            <input type="month" v-model="selectedMonth" @change="fetchOrders">
+                        </div>
+                        <div class="filter-group">
+                            <label>{{ t('selectOutlet') || 'Select Outlet' }}</label>
+                            <select v-model="selectedOutlet" @change="fetchOrders">
+                                <option value="">{{ t('selectOutlet') || 'Select Outlet' }}</option>
+                                <option v-for="outlet in outlets" :key="outlet.id" :value="outlet.id">
+                                    {{ outlet.name }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="orders.length > 0">
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <h3>{{ t('totalDays') || 'Total Days' }}</h3>
+                            <div class="value">{{ dailySummaries.length }}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>{{ t('totalOrders') || 'Total Orders' }}</h3>
+                            <div class="value">{{ orders.length }}</div>
+                        </div>
+                        <div class="summary-card">
+                            <h3>{{ t('totalAmount') || 'Total Amount' }}</h3>
+                            <div class="value">${{ totalAmount.toFixed(2) }}</div>
+                        </div>
+                    </div>
+
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>{{ t('date') || 'Date' }}</th>
+                                <th>{{ t('totalOrders') || 'Total Orders' }}</th>
+                                <th>{{ t('totalItems') || 'Total Items' }}</th>
+                                <th>{{ t('dailyAmount') || 'Daily Amount' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="summary in dailySummaries" :key="summary.date">
+                                <td>{{ formatDate(summary.date) }}</td>
+                                <td>{{ summary.orderCount }}</td>
+                                <td>{{ summary.totalItems }}</td>
+                                <td>${{ summary.dailyAmount.toFixed(2) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <button class="export-btn" @click="exportToPDF">
+                        {{ t('exportToPDF') || 'Export to PDF' }}
+                    </button>
+                </div>
+
+                <div v-else class="no-data">
+                    <p>{{ t('noOrdersFound') || 'No orders found for the selected criteria' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { secrets } from './secrets.js';
+
+        const { createApp } = Vue;
+
+        const app = createApp({
+            data() {
+                return {
+                    isCheckingAuth: true,
+                    isAuthenticated: false,
+                    userEmail: '',
+                    currentLang: 'en',
+                    selectedMonth: '',
+                    selectedOutlet: '',
+                    outlets: [],
+                    orders: [],
+                    translations: {
+                        en: {
+                            statementOfAccount: 'Statement of Account',
+                            selectMonth: 'Select Month',
+                            selectOutlet: 'Select Outlet',
+                            totalDays: 'Total Days',
+                            totalOrders: 'Total Orders',
+                            totalItems: 'Total Items',
+                            totalAmount: 'Total Amount',
+                            dailyAmount: 'Daily Amount',
+                            date: 'Date',
+                            exportToPDF: 'Export to PDF',
+                            noOrdersFound: 'No orders found for the selected criteria',
+                            back: 'Back'
+                        },
+                        zh: {
+                            statementOfAccount: '对账单',
+                            selectMonth: '选择月份',
+                            selectOutlet: '选择门店',
+                            totalDays: '总天数',
+                            totalOrders: '总订单数',
+                            totalItems: '总商品数',
+                            totalAmount: '总金额',
+                            dailyAmount: '日金额',
+                            date: '日期',
+                            exportToPDF: '导出PDF',
+                            noOrdersFound: '未找到符合条件的订单',
+                            back: '返回'
+                        }
+                    }
+                };
+            },
+            computed: {
+                totalAmount() {
+                    return this.orders.reduce((sum, order) => sum + order.totalAmount, 0);
+                },
+                dailySummaries() {
+                    const summaries = {};
+                    
+                    this.orders.forEach(order => {
+                        // Get order time in minutes since midnight
+                        const orderDate = new Date(order.date);
+                        const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes();
+                        const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
+                        
+                        // If order is after 4:30 PM, use next day
+                        let effectiveDate = new Date(orderDate);
+                        if (orderTime > cutoffTime) {
+                            effectiveDate.setDate(effectiveDate.getDate() + 1);
+                        }
+                        
+                        const dateKey = effectiveDate.toDateString();
+                        if (!summaries[dateKey]) {
+                            summaries[dateKey] = {
+                                date: effectiveDate,
+                                orderCount: 0,
+                                totalItems: 0,
+                                dailyAmount: 0,
+                                orders: [] // Store orders for this day
+                            };
+                        }
+                        
+                        summaries[dateKey].orderCount++;
+                        summaries[dateKey].totalItems += order.items.length;
+                        summaries[dateKey].dailyAmount += order.totalAmount;
+                        summaries[dateKey].orders.push(order);
+                    });
+                    
+                    return Object.values(summaries).sort((a, b) => new Date(b.date) - new Date(a.date));
+                }
+            },
+            methods: {
+                t(key) {
+                    return this.translations[this.currentLang][key];
+                },
+                toggleLanguage() {
+                    this.currentLang = this.currentLang === 'en' ? 'zh' : 'en';
+                },
+                goBack() {
+                    window.history.back();
+                },
+                formatDate(date) {
+                    return new Date(date).toLocaleDateString();
+                },
+                async fetchOrders() {
+                    if (!this.selectedMonth || !this.selectedOutlet) return;
+
+                    const [year, month] = this.selectedMonth.split('-');
+                    const startDate = new Date(year, month - 1, 1);
+                    const endDate = new Date(year, month, 0);
+
+                    const db = getFirestore();
+                    const ordersRef = collection(db, 'orders');
+                    const q = query(
+                        ordersRef,
+                        where('outletId', '==', this.selectedOutlet),
+                        where('date', '>=', startDate),
+                        where('date', '<=', endDate)
+                    );
+
+                    const querySnapshot = await getDocs(q);
+                    this.orders = querySnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                },
+                async fetchOutlets() {
+                    const db = getFirestore();
+                    const outletsRef = collection(db, 'outlets');
+                    const querySnapshot = await getDocs(outletsRef);
+                    this.outlets = querySnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                },
+                async exportToPDF() {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+
+                    // Company details
+                    doc.setFontSize(20);
+                    doc.text('SHIAWASE (S) PTE LTD', 20, 20);
+                    doc.setFontSize(12);
+                    doc.text('Statement of Account', 20, 30);
+                    
+                    // Outlet and period details
+                    const outlet = this.outlets.find(o => o.id === this.selectedOutlet);
+                    doc.text(`Bill To: ${outlet?.name || ''}`, 20, 45);
+                    doc.text(`Period: ${this.selectedMonth}`, 20, 50);
+                    doc.text('Note: Orders after 4:30 PM are counted for the next day', 20, 55);
+
+                    // Calculate running balance
+                    let runningBalance = 0;
+                    const tableRows = this.dailySummaries.map(summary => {
+                        runningBalance += summary.dailyAmount;
+                        return [
+                            this.formatDate(summary.date),
+                            `INV-${summary.date.toISOString().split('T')[0].replace(/-/g, '')}`,
+                            `$${summary.dailyAmount.toFixed(2)}`,
+                            '$0.00',
+                            `$${runningBalance.toFixed(2)}`
+                        ];
+                    });
+
+                    // Add total row
+                    tableRows.push([
+                        'Total',
+                        '',
+                        `$${this.totalAmount.toFixed(2)}`,
+                        '$0.00',
+                        `$${this.totalAmount.toFixed(2)}`
+                    ]);
+
+                    // Add table
+                    doc.autoTable({
+                        head: [['Date', 'Invoice Number', 'Debit', 'Credit', 'Balance']],
+                        body: tableRows,
+                        startY: 65,
+                        theme: 'grid',
+                        styles: {
+                            fontSize: 10,
+                            cellPadding: 5,
+                        },
+                        headStyles: {
+                            fillColor: [26, 60, 110], // #1a3c6e
+                            textColor: 255,
+                            fontStyle: 'bold'
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 30 },
+                            1: { cellWidth: 40 },
+                            2: { cellWidth: 30, halign: 'right' },
+                            3: { cellWidth: 30, halign: 'right' },
+                            4: { cellWidth: 30, halign: 'right' }
+                        },
+                        footStyles: {
+                            fillColor: [26, 60, 110],
+                            textColor: 255,
+                            fontStyle: 'bold'
+                        },
+                        didDrawPage: function(data) {
+                            // Add statements at the bottom of each page
+                            const pageHeight = doc.internal.pageSize.height;
+                            doc.setFontSize(8);
+                            doc.text('1. All prices are subjected to changes without prior notice', 20, pageHeight - 30);
+                            doc.text('2. Should there be any discrepancy in this statement, please notify us within 7 days', 20, pageHeight - 25);
+                            doc.text('3. Cheques should be crossed and made payable to \'SHIAWASE (S) PTE LTD\'', 20, pageHeight - 20);
+                        }
+                    });
+
+                    // Save the PDF
+                    doc.save(`SOA_${this.selectedOutlet}_${this.selectedMonth}.pdf`);
+                }
+            },
+            async mounted() {
+                const app = initializeApp(secrets.firebaseConfig);
+                const auth = getAuth(app);
+
+                onAuthStateChanged(auth, (user) => {
+                    this.isCheckingAuth = false;
+                    if (user) {
+                        this.isAuthenticated = true;
+                        this.userEmail = user.email;
+                        this.fetchOutlets();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                });
+
+                // Set default month to current month
+                const now = new Date();
+                this.selectedMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html> 

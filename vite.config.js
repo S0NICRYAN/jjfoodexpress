@@ -23,7 +23,8 @@ export default defineConfig({
         preview: 'preview.html',
         history: 'history.html',
         outlet_management: 'outlet_management.html',
-        order_management:'order_management.html'
+        order_management:'order_management.html',
+        soa:'soa.html'
       }
     }
   }
