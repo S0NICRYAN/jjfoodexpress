@@ -51,7 +51,8 @@
                 const isSubmitSuccess = ref(false);
                 const errorMessage = ref('');
                 const currentHour = new Date().getHours();
-                const isAfterCutoff = currentHour >= 22;
+                const currentMinutes = new Date().getMinutes();
+                const isAfterCutoff = (currentHour > 16 || (currentHour === 16 && currentMinutes >= 30));
                 const dateError = ref('');
                 const currentLang = ref('zh'); // Default to Chinese
                 const referringPage = ref('index.html'); // Default referring page
@@ -167,9 +168,10 @@
                 function getDefaultDeliveryDate() {
                     const now = new Date();
                     const currentHour = now.getHours();
+                    const currentMinutes = now.getMinutes();
                     
-                    // If time is 10pm (22:00) or later, delivery date should be 2 days later
-                    const daysToAdd = currentHour >= 22 ? 2 : 1;
+                    // If time is 4:30 PM or later, delivery date should be 2 days later
+                    const daysToAdd = (currentHour > 16 || (currentHour === 16 && currentMinutes >= 30)) ? 2 : 1;
                     
                     const deliveryDate = new Date();
                     deliveryDate.setDate(deliveryDate.getDate() + daysToAdd);
@@ -181,15 +183,22 @@
                     return `${year}-${month}-${day}`;
                 }
                 
-                /* Function to get minimum allowed delivery date (always tomorrow) */
+                /* Function to get minimum allowed delivery date */
                 function getMinDeliveryDate() {
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const now = new Date();
+                    const currentHour = now.getHours();
+                    const currentMinutes = now.getMinutes();
+                    
+                    // If time is 4:30 PM or later, minimum delivery date is 2 days later
+                    const daysToAdd = (currentHour > 16 || (currentHour === 16 && currentMinutes >= 30)) ? 2 : 1;
+                    
+                    const minDate = new Date();
+                    minDate.setDate(minDate.getDate() + daysToAdd);
                     
                     // Format for input type="date" needs to be YYYY-MM-DD
-                    const year = tomorrow.getFullYear();
-                    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
-                    const day = String(tomorrow.getDate()).padStart(2, '0');
+                    const year = minDate.getFullYear();
+                    const month = String(minDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(minDate.getDate()).padStart(2, '0');
                     return `${year}-${month}-${day}`;
                 }
                 
@@ -355,30 +364,7 @@
                         dateError.value = '请选择送货日期 / Please select a delivery date';
                         return false;
                     }
-                    
-                    try {
-                        const selectedDate = new Date(deliveryDate.value);
-                        const minDate = new Date(getMinDeliveryDate());
-                        
-                        // Check if the selected date is valid
-                        if (isNaN(selectedDate.getTime())) {
-                            dateError.value = '日期格式无效 / Invalid date format';
-                            return false;
-                        }
-                        
-                        // Check if selected date is not before the minimum date
-                        if (selectedDate < minDate) {
-                            dateError.value = '送货日期不能早于明天 / Delivery date cannot be earlier than tomorrow';
-                            return false;
-                        }
-                        
-                        // All checks passed
-                        dateError.value = '';
-                        return true;
-                    } catch (e) {
-                        dateError.value = '请选择有效的送货日期 / Please select a valid delivery date';
-                        return false;
-                    }
+                    return true;
                 }
                 
                 /* Submit order to Firestore and send email */
@@ -699,12 +685,10 @@
                             type="date" 
                             id="delivery-date" 
                             class="form-control" 
-                            :class="{ 'error': dateError }"
                             v-model="deliveryDate" 
-                            :min="getMinDeliveryDate()"
-                            required
+                            readonly
+                            disabled
                         >
-                        <div class="error-text" v-if="dateError">{{ dateError }}</div>
                         <div class="form-note" v-if="isAfterCutoff">
                             {{ t('afterCutoff') }}
                         </div>
