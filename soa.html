@@ -10,6 +10,7 @@
     <!-- jsPDF for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-font-asian@0.0.3/dist/SimSun-normal.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
     <style>
         /* Base Styles */
         * {
@@ -554,7 +555,11 @@
                         .filter(order => {
                             if (!order.createdAt) return false;
                             const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
-                            return orderDate >= startDate && orderDate <= endDate;
+                            return (
+                                orderDate >= startDate &&
+                                orderDate <= endDate &&
+                                (order.status === 'processing' || order.status === 'delivered')
+                            );
                         });
                 },
                 async fetchOutlets() {
