@@ -596,12 +596,8 @@
                     // Left-aligned outlet info
                     doc.setFontSize(10);
                     const outlet = this.outlets.find(o => o.id === this.selectedOutlet);
-                    doc.text('DELIVER TO :', 20, y);
+                    doc.text('BILL TO :', 20, y);
                     y += 5;
-                    if (outlet?.name) {
-                        doc.text(outlet.name, 20, y);
-                        y += 5;
-                    }
                     if (outlet?.address) {
                         const addressLines = doc.splitTextToSize(outlet.address, 90);
                         addressLines.forEach(line => {
