@@ -547,6 +547,21 @@
                             <span class="btn btn-primary">{{ t('enter') }}</span>
                         </div>
                     </a>
+
+                    <!-- Statement of Account -->
+                    <a href="#" class="menu-item" @click.prevent="goToPage('soa')">
+                        <div class="menu-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-content">
+                            <h3 class="menu-title">{{ t('statementOfAccount') }}</h3>
+                            <p class="menu-description">{{ t('statementOfAccountDesc') }}</p>
+                            <span class="btn btn-primary">{{ t('enter') }}</span>
+                        </div>
+                    </a>
                 </div>
             </div>
         </div>
@@ -599,11 +614,11 @@
                         en: 'Password:'
                     },
                     enterEmail: {
-                        zh: '输入电子邮件地址',
+                        zh: '请输入电子邮件',
                         en: 'Enter your email'
                     },
                     enterPassword: {
-                        zh: '输入密码',
+                        zh: '请输入密码',
                         en: 'Enter your password'
                     },
                     login: {
@@ -614,41 +629,45 @@
                         zh: '登录中...',
                         en: 'Logging in...'
                     },
-                    loginError: {
-                        zh: '登录失败: 请检查您的电子邮件和密码',
-                        en: 'Login failed: Please check your email and password'
-                    },
                     welcomeAdmin: {
-                        zh: '欢迎来到管理员门户',
+                        zh: '欢迎使用管理员门户',
                         en: 'Welcome to the Admin Portal'
                     },
                     selectModule: {
-                        zh: '请选择您要管理的模块',
-                        en: 'Please select a module to manage'
+                        zh: '请选择要使用的模块',
+                        en: 'Please select a module to use'
                     },
                     orderManagement: {
                         zh: '订单管理',
                         en: 'Order Management'
                     },
                     orderManagementDesc: {
-                        zh: '查看和处理客户订单',
-                        en: 'View and process customer orders'
+                        zh: '查看和管理订单',
+                        en: 'View and manage orders'
                     },
                     productManagement: {
                         zh: '产品管理',
                         en: 'Product Management'
                     },
                     productManagementDesc: {
-                        zh: '管理产品目录和价格',
-                        en: 'Manage product catalog and pricing'
+                        zh: '管理产品目录',
+                        en: 'Manage product catalog'
                     },
                     outletManagement: {
                         zh: '门店管理',
                         en: 'Outlet Management'
                     },
                     outletManagementDesc: {
-                        zh: '管理门店信息和设置',
-                        en: 'Manage outlet information and settings'
+                        zh: '管理门店信息',
+                        en: 'Manage outlet information'
+                    },
+                    statementOfAccount: {
+                        zh: '对账单',
+                        en: 'Statement of Account'
+                    },
+                    statementOfAccountDesc: {
+                        zh: '查看和管理对账单',
+                        en: 'View and manage statements of account'
                     },
                     enter: {
                         zh: '进入',
@@ -716,6 +735,8 @@
                         window.location.href = 'order_management.html';
                     } else if (page === 'outlets') {
                         window.location.href = 'outlet_management.html';
+                    } else if (page === 'soa') {
+                        window.location.href = 'soa.html';
                     }
                 };
                 
