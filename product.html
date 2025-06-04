@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>产品管理系统 - SHIAWASE (S) PTE LTD</title>
+    <title>库存管理系统 - SHIAWASE (S) PTE LTD</title>
     <link rel="stylesheet" href="product.css">
     <!-- Vue 3 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
@@ -46,49 +46,49 @@
                 <p>Checking authentication...</p>
             </div>
             <div v-else-if="isAuthenticated">
-                <h1>Product Management <span class="english-subtext" v-if="currentLang === 'zh'">Product Management</span></h1>
+                <h1>{{ t('appTitle') }}</h1>
                 <div v-if="message.text" :class="['message', message.type === 'success' ? 'message-success' : 'message-error']">
                     {{ message.text }}
                 </div>
                 <!-- Product Form -->
-                <h2 id="product-form">{{ isEditing ? 'Edit Product' : 'Add New Product' }}</h2>
+                <h2 id="product-form">{{ isEditing ? t('editProduct') : t('addNewProduct') }}</h2>
                 <div class="card">
                     <div class="form-row">
                         <div class="form-group-flex">
-                            <label for="productName">Product Name (English):</label>
-                            <input type="text" id="productName" class="form-control" v-model="productName" placeholder="Enter product name">
+                            <label for="productName">{{ t('productNameEn') }}</label>
+                            <input type="text" id="productName" class="form-control" v-model="productName" :placeholder="t('enterProductName')">
                         </div>
                         <div class="form-group-flex">
-                            <label for="productChineseName">Product Name (Chinese):</label>
-                            <input type="text" id="productChineseName" class="form-control" v-model="productChineseName" placeholder="Enter Chinese name">
+                            <label for="productChineseName">{{ t('productNameCn') }}</label>
+                            <input type="text" id="productChineseName" class="form-control" v-model="productChineseName" :placeholder="t('enterChineseName')">
                         </div>
                     </div>
                     <br>
                     <div class="form-row">
                         <div class="form-group-flex">
-                            <label for="productPrice">Price:</label>
-                            <input type="number" id="productPrice" class="form-control" v-model="productPrice" placeholder="Enter price" step="0.01">
+                            <label for="productPrice">{{ t('price') }}</label>
+                            <input type="number" id="productPrice" class="form-control" v-model="productPrice" :placeholder="t('enterPrice')" step="0.01">
                         </div>
                         <div class="form-group-flex">
-                            <label for="productUnit">Unit:</label>
+                            <label for="productUnit">{{ t('unit') }}</label>
                             <select id="productUnit" class="form-control" v-model="productUnit">
                                 <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
                             </select>
                         </div>
                         <div class="form-group-flex">
-                            <label for="productUOM">UOM:</label>
-                            <input type="text" id="productUOM" class="form-control" v-model="productUOM" placeholder="Enter UOM">
+                            <label for="productUOM">{{ t('uom') }}</label>
+                            <input type="text" id="productUOM" class="form-control" v-model="productUOM" :placeholder="t('enterUOM')">
                         </div>
                         <div class="form-group-flex">
-                            <label for="productStock">Stock:</label>
+                            <label for="productStock">{{ t('stock') }}</label>
                             <input type="number" id="productStock" class="form-control" v-model="productStock" min="0">
                         </div>
                     </div>
                     <br>
                     <div class="form-group">
-                        <label for="productImage">Product Image:</label>
+                        <label for="productImage">{{ t('productImage') }}</label>
                         <input type="file" id="productImage" class="form-control" @change="handleImageSelected" accept="image/*">
-                        <div class="file-size-info">* Images must be under 1MB in size</div>
+                        <div class="file-size-info">{{ t('imageSizeInfo') }}</div>
                         <div class="image-preview">
                             <img v-if="imagePreview" :src="imagePreview" alt="Product Preview">
                             <div v-else class="image-preview-empty">
@@ -96,38 +96,38 @@
                                     <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
                                     <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
                                 </svg>
-                                No image selected
+                                {{ t('noImageSelected') }}
                             </div>
                         </div>
                     </div>
                     <div class="form-actions">
                         <button class="btn btn-primary" @click="submitForm" :disabled="isSubmitting">
-                            {{ isSubmitting ? 'Saving...' : (isEditing ? 'Update Product' : 'Add Product') }}
+                            {{ isSubmitting ? t('saving') : (isEditing ? t('updateProduct') : t('addProduct')) }}
                         </button>
-                        <button v-if="isEditing" class="btn btn-secondary" @click="resetForm">Cancel Editing</button>
+                        <button v-if="isEditing" class="btn btn-secondary" @click="resetForm">{{ t('cancelEditing') }}</button>
                     </div>
                 </div>
                 <!-- Product List -->
-                <h2>Product List</h2>
+                <h2>{{ t('productList') }}</h2>
                 <div class="card">
                     <div class="search-container">
-                        <input type="text" class="search-input" v-model="searchQuery" placeholder="Search products...">
+                        <input type="text" class="search-input" v-model="searchQuery" :placeholder="t('searchProducts')">
                     </div>
-                    <div v-if="isLoading" class="loading">Loading products...</div>
+                    <div v-if="isLoading" class="loading">{{ t('loadingProducts') }}</div>
                     <div v-else-if="products.length === 0" class="empty-state">
-                        No products found.
+                        {{ t('noProductsFound') }}
                     </div>
                     <table v-else class="product-table">
                         <thead>
                             <tr>
-                                <th style="width: 70px;">Image</th>
-                                <th>Product Name</th>
-                                <th>Chinese Name</th>
-                                <th>Price</th>
-                                <th>Unit</th>
-                                <th>UOM</th>
-                                <th>Stock</th>
-                                <th>Actions</th>
+                                <th style="width: 70px;">{{ t('image') }}</th>
+                                <th>{{ t('productName') }}</th>
+                                <th>{{ t('chineseName') }}</th>
+                                <th>{{ t('price') }}</th>
+                                <th>{{ t('unit') }}</th>
+                                <th>{{ t('uom') }}</th>
+                                <th>{{ t('stock') }}</th>
+                                <th>{{ t('actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -143,8 +143,8 @@
                                 <td>{{ product.stock }}</td>
                                 <td>
                                     <div class="table-actions">
-                                        <button class="btn btn-secondary" @click="editProduct(product)">Edit</button>
-                                        <button class="btn btn-danger" @click="deleteProduct(product)">Delete</button>
+                                        <button class="btn btn-secondary" @click="editProduct(product)">{{ t('edit') }}</button>
+                                        <button class="btn btn-danger" @click="deleteProduct(product)">{{ t('delete') }}</button>
                                     </div>
                                 </td>
                             </tr>
@@ -217,7 +217,7 @@
 
                 // --- Translations ---
                 const translations = {
-                    appTitle: { zh: '产品管理系统', en: 'Product Management' },
+                    appTitle: { zh: '库存管理系统', en: 'Inventory Management' },
                     addNewProduct: { zh: '添加新产品', en: 'Add New Product' },
                     editProduct: { zh: '编辑产品', en: 'Edit Product' },
                     productNameEn: { zh: '产品名称 (英文)', en: 'Product Name (English)' },
