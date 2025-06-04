@@ -596,8 +596,7 @@
                     // Left-aligned outlet info
                     doc.setFontSize(10);
                     const outlet = this.outlets.find(o => o.id === this.selectedOutlet);
-                    let deliverToLine = 'DELIVER TO :';
-                    if (outlet?.name) deliverToLine += ' ' + outlet.name;
+                    let deliverToLine = 'BILL TO :';
                     // Calculate the 1st of the next month
                     const [year, month] = this.selectedMonth.split('-');
                     let nextMonth = parseInt(month, 10) + 1;
