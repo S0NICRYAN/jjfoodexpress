@@ -11,6 +11,131 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-font-asian@0.0.3/dist/SimSun-normal.js"></script>
     <style>
+        /* Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.5;
+            height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background-color: #1a3c6e;
+            color: white;
+            padding: 10px 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .logo img {
+            margin-right: 10px;
+            height: 50px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        
+        .user-info svg {
+            margin-right: 5px;
+        }
+
+        .back-btn {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .back-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .language-toggle {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .language-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Loading animation */
+        .auth-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(26, 60, 110, 0.2);
+            border-radius: 50%;
+            border-top-color: #1a3c6e;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* SOA specific styles */
         .soa-container {
             padding: 20px;
         }
@@ -121,6 +246,52 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            header {
+                padding: 10px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+
+            .logo {
+                justify-content: center;
+            }
+
+            .logo img {
+                height: 40px;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                width: 100%;
+                gap: 10px;
+            }
+
+            .user-info {
+                justify-content: center;
+                width: 100%;
+            }
+
+            .back-btn, .language-toggle {
+                width: 100%;
+                padding: 8px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            .filter-row {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -266,7 +437,8 @@
                             date: 'Date',
                             exportToPDF: 'Export to PDF',
                             noOrdersFound: 'No orders found for the selected criteria',
-                            back: 'Back'
+                            back: 'Back',
+                            checkingAuth: 'Checking authentication...'
                         },
                         zh: {
                             statementOfAccount: '对账单',
@@ -280,7 +452,8 @@
                             date: '日期',
                             exportToPDF: '导出PDF',
                             noOrdersFound: '未找到符合条件的订单',
-                            back: '返回'
+                            back: '返回',
+                            checkingAuth: '正在检查身份验证...'
                         }
                     }
                 };
@@ -450,6 +623,12 @@
             async mounted() {
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
+
+                // Load saved language preference
+                const savedLang = localStorage.getItem('preferred_language');
+                if (savedLang && (savedLang === 'zh' || savedLang === 'en')) {
+                    this.currentLang = savedLang;
+                }
 
                 onAuthStateChanged(auth, (user) => {
                     this.isCheckingAuth = false;
