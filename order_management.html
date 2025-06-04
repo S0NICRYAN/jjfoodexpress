@@ -708,17 +708,21 @@
                             invoiceDate.setDate(invoiceDate.getDate() + 1);
                         }
                         
-                        // Format date for query
-                        const invoiceDateStr = invoiceDate.toISOString().split('T')[0];
-                        const nextDayStr = new Date(invoiceDate.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                        
-                        // Fetch all orders for the same outlet on the invoice date
+                        // Calculate the start and end for the invoice window
+                        const invoiceStart = new Date(invoiceDate);
+                        invoiceStart.setDate(invoiceDate.getDate() - 1);
+                        invoiceStart.setHours(16, 30, 0, 0); // Previous day 16:30
+
+                        const invoiceEnd = new Date(invoiceDate);
+                        invoiceEnd.setHours(16, 30, 0, 0); // Invoice day 16:30
+
+                        // Fetch all orders for the same outlet in the invoice window
                         const ordersRef = collection(db, 'orders');
                         const q = query(
                             ordersRef,
                             where('outletId', '==', order.outletId),
-                            where('createdAt', '>=', new Date(invoiceDateStr)),
-                            where('createdAt', '<', new Date(nextDayStr)),
+                            where('createdAt', '>', invoiceStart),
+                            where('createdAt', '<=', invoiceEnd),
                             where('status', 'in', ['processing', 'delivered'])
                         );
                         
