@@ -810,9 +810,15 @@
                         // Find the highest order ID from related orders (use part after dash)
                         const numericOrderIds = relatedOrders
                             .map(order => {
-                                if (order.orderId && order.orderId.includes('-')) {
-                                    const parts = order.orderId.split('-');
-                                    const num = parseInt(parts[1], 10);
+                                // Use order.orderId if present, otherwise order.id
+                                const oid = order.orderId || order.id || '';
+                                if (oid) {
+                                    if (oid.includes('-')) {
+                                        const parts = oid.split('-');
+                                        const num = parseInt(parts[1], 10);
+                                        return !isNaN(num) ? num : null;
+                                    }
+                                    const num = parseInt(oid, 10);
                                     return !isNaN(num) ? num : null;
                                 }
                                 return null;
@@ -823,9 +829,12 @@
                         if (numericOrderIds.length > 0) {
                             invoiceNumberPrefix = Math.max(...numericOrderIds);
                         } else if (relatedOrders.length > 0) {
-                            invoiceNumberPrefix = relatedOrders[0].orderId || "UNKNOWN";
+                            // Use the first order's orderId or id, removing any non-numeric characters
+                            const firstOrderId = relatedOrders[0].orderId || relatedOrders[0].id || '';
+                            const numericPart = firstOrderId.replace(/[^0-9]/g, '');
+                            invoiceNumberPrefix = numericPart || '0001';
                         } else {
-                            invoiceNumberPrefix = "UNKNOWN";
+                            invoiceNumberPrefix = '0001';
                         }
                         const invoiceNumber = `${invoiceNumberPrefix}/${formattedDate}`;
                         
