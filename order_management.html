@@ -805,6 +805,8 @@
                             y += 6;
                         });
                         
+                        // Prepare formatted date for invoice number
+                        const formattedDate = formatDate(invoiceDate).replace(/\//g, '');
                         // Find the highest order ID from related orders (use part after dash)
                         const numericOrderIds = relatedOrders
                             .map(order => {
