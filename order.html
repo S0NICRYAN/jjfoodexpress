@@ -607,18 +607,21 @@
                         <div v-else class="product-price">${{ formatCurrency(parseFloat(product.price || 0)) }} 每{{ product.unit }} <span class="unit-english">(per {{ getUnitTranslation(product.unit) }})</span></div>
                         <div class="order-qty">
                             <span>订购数量 (Order Qty):</span>
-                            <div class="qty-controls">
-                                <button class="qty-btn" @click="product.orderQty = Math.max(0, (product.orderQty || 0) - 1); updateTotals()">-</button>
+                            <div v-if="product.stock === 0" class="out-of-stock-text" style="color: #d9534f; font-weight: bold;">Out of stock / 缺货 / Habis Stok</div>
+                            <div v-else class="qty-controls">
+                                <button class="qty-btn" @click="product.orderQty = Math.max(0, (product.orderQty || 0) - 1); updateTotals()" :disabled="product.orderQty <= 0">-</button>
                                 <input 
                                     type="number" 
                                     class="qty-input" 
                                     v-model.number="product.orderQty" 
                                     min="0" 
-                                    @change="updateTotals"
+                                    :max="product.stock"
+                                    @change="product.orderQty = Math.min(Math.max(0, product.orderQty), product.stock); updateTotals()"
                                     inputmode="numeric"
                                     pattern="[0-9]*"
                                 >
-                                <button class="qty-btn" @click="product.orderQty = (product.orderQty || 0) + 1; updateTotals()">+</button>
+                                <button class="qty-btn" @click="product.orderQty = Math.min(product.stock, (product.orderQty || 0) + 1); updateTotals()" :disabled="product.orderQty >= product.stock">+</button>
+                                <span v-if="product.stock !== undefined && product.stock !== null" class="stock-info" style="margin-left: 8px; color: #888; font-size: 12px;">Stock: {{ product.stock }}</span>
                             </div>
                         </div>
                     </div>
