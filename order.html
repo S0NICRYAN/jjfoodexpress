@@ -608,7 +608,7 @@
                         <div v-else class="product-price">${{ formatCurrency(parseFloat(product.price || 0)) }} 每{{ product.unit }} <span class="unit-english">(per {{ getUnitTranslation(product.unit) }})</span></div>
                         <div class="order-qty">
                             <span>订购数量 (Order Qty):</span>
-                            <div v-if="product.stock === 0" class="out-of-stock-text" style="color: #d9534f; font-weight: bold;">Out of stock / 缺货 / Habis Stok</div>
+                            <div v-if="product.stock === 0" class="out-of-stock-text" style="color: #d9534f; font-weight: bold;">Out of stock / 缺货</div>
                             <div v-else class="qty-controls">
                                 <button class="qty-btn" @click="product.orderQty = Math.max(0, (product.orderQty || 0) - 1); updateTotals()" :disabled="product.orderQty <= 0">-</button>
                                 <input 
