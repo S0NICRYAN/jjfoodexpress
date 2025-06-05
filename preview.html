@@ -709,6 +709,7 @@
                                                 @change="item.quantity = Math.min(Math.max(1, item.quantity), item.stock !== undefined ? item.stock : Infinity); updateQuantity(item, item.quantity)"
                                             >
                                             <button class="qty-btn" @click="updateQuantity(item, Math.min(item.stock !== undefined ? item.stock : Infinity, item.quantity + 1))" :disabled="item.stock !== undefined && item.quantity >= item.stock">+</button>
+                                            <span v-if="item.stock !== undefined && item.quantity >= item.stock" class="max-stock-msg" style="margin-left: 8px; color: #d9534f; font-size: 12px; font-weight: bold;">Max stock available</span>
                                         </div>
                                     </td>
                                     <td class="total-cell">${{ formatCurrency(item.subtotal || 0) }}</td>
