@@ -463,7 +463,8 @@
                                 UOM: item.UOM,
                                 quantity: item.orderQty,
                                 subtotal: roundToTwoDecimals(parseFloat(item.price || 0) * item.orderQty),
-                                image: item.imageData || item.image
+                                image: item.imageData || item.image,
+                                stock: item.stock
                             })),
                             subTotal: subTotal.value,
                             gst: gst.value,
