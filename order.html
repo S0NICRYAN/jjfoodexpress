@@ -453,8 +453,7 @@
                             outletName: outletName.value,
                             outletAddress: outletAddress.value,
                             items: orderedItems.map(item => ({
-                                id: item.id,
-                                productId: item.productId,
+                                id: item.productId,
                                 name: item.name,
                                 chinese: item.cname,
                                 price: parseFloat(item.price || 0),
