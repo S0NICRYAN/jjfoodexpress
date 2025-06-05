@@ -297,25 +297,43 @@
                         isLoading.value = true;
                         products.value = [];
                         
-                        const productsCollectionPath = `outlets/${id}/products`;
-                        const productsRef = collection(db, productsCollectionPath);
+                        // First get the outlet's product references
+                        const outletProductsRef = collection(db, `outlets/${id}/products`);
+                        const outletSnapshot = await getDocs(outletProductsRef);
                         
-                        const snapshot = await getDocs(productsRef);
-                        
-                        if (snapshot.empty) {
+                        if (outletSnapshot.empty) {
                             errorMessage.value = 'No products found for this outlet. Please contact customer service.';
                             isLoading.value = false;
                             return false;
                         }
-                        
-                        products.value = snapshot.docs.map(doc => {
+
+                        // Create a map of product references
+                        const productRefs = new Map();
+                        outletSnapshot.docs.forEach(doc => {
                             const data = doc.data();
-                            return {
-                                id: doc.id,
-                                ...data,
-                                orderQty: 0
-                            };
+                            if (data.productId) {
+                                productRefs.set(data.productId, {
+                                    id: doc.id,
+                                    orderQty: 0
+                                });
+                            }
                         });
+
+                        // Fetch all referenced products from the global products collection
+                        const productsRef = collection(db, 'products');
+                        const productsSnapshot = await getDocs(productsRef);
+                        
+                        // Combine outlet product data with global product data
+                        products.value = productsSnapshot.docs
+                            .filter(doc => productRefs.has(doc.id))
+                            .map(doc => {
+                                const outletData = productRefs.get(doc.id);
+                                return {
+                                    ...doc.data(),
+                                    id: outletData.id,
+                                    orderQty: outletData.orderQty
+                                };
+                            });
                         
                         isLoading.value = false;
                         return true;
@@ -436,6 +454,7 @@
                             outletAddress: outletAddress.value,
                             items: orderedItems.map(item => ({
                                 id: item.id,
+                                productId: item.productId,
                                 name: item.name,
                                 chinese: item.cname,
                                 price: parseFloat(item.price || 0),
