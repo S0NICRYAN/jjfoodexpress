@@ -331,6 +331,7 @@
                                 return {
                                     ...doc.data(),
                                     id: outletData.id,
+                                    productId: doc.id,
                                     orderQty: outletData.orderQty
                                 };
                             });
@@ -453,7 +454,7 @@
                             outletName: outletName.value,
                             outletAddress: outletAddress.value,
                             items: orderedItems.map(item => ({
-                                id: item.productId,
+                                productId: item.productId,
                                 name: item.name,
                                 chinese: item.cname,
                                 price: parseFloat(item.price || 0),
