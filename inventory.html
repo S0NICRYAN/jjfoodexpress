@@ -365,6 +365,9 @@
                     productStock.value = product.stock;
                     imagePreview.value = product.imageData || product.image || '';
                     imageData.value = product.imageData || '';
+                    
+                    // Scroll to the form
+                    document.getElementById('product-form').scrollIntoView({ behavior: 'smooth' });
                 };
                 const deleteProduct = async (product) => {
                     if (!confirm(`${t('delete')}: ${product.name}?`)) return;
