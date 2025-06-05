@@ -622,7 +622,6 @@
                                     pattern="[0-9]*"
                                 >
                                 <button class="qty-btn" @click="product.orderQty = Math.min(product.stock, (product.orderQty || 0) + 1); updateTotals()" :disabled="product.orderQty >= product.stock">+</button>
-                                <span v-if="product.stock !== undefined && product.stock !== null" class="stock-info" style="margin-left: 8px; color: #888; font-size: 12px;">Stock: {{ product.stock }}</span>
                             </div>
                         </div>
                     </div>
