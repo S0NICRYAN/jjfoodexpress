@@ -622,7 +622,7 @@
                                     pattern="[0-9]*"
                                 >
                                 <button class="qty-btn" @click="product.orderQty = Math.min(product.stock, (product.orderQty || 0) + 1); updateTotals()" :disabled="product.orderQty >= product.stock">+</button>
-                                <span v-if="product.stock !== undefined && product.orderQty >= product.stock" class="max-stock-msg" style="margin-left: 8px; color: #d9534f; font-size: 12px; font-weight: bold;">Max stock available / 缺货</span>
+                                <span v-if="product.stock !== undefined && product.orderQty >= product.stock" class="max-stock-msg" style="margin-left: 8px; color: #d9534f; font-size: 12px; font-weight: bold;">Max stock available / 最大订购量</span>
                             </div>
                         </div>
                     </div>

@@ -88,7 +88,8 @@
                         afterCutoff: "已超过截单时间（四点三十分）。您最早的送货日期为后天。",
                         beforeCutoff: "请仔细检查日期。四点三十分后下的订单将在第二天处理。",
                         enterRemarks: "在此输入备注",
-                        enterReference: "在此输入参考编号"
+                        enterReference: "在此输入参考编号",
+                        maxstock:"最大订购量"
                     },
                     en: {
                         product: "Product",
@@ -116,7 +117,8 @@
                         afterCutoff: "It is after the order cutoff time (04:30 PM). Your earliest delivery date is in 2 days.",
                         beforeCutoff: "Kindly double check the date. Orders placed after 04:30 PM will be processed the next day.",
                         enterRemarks: "Enter your remarks here",
-                        enterReference: "Enter your reference here"
+                        enterReference: "Enter your reference here",
+                        maxstock: "Maximum stock available"
                     }
                 };
                 const extractChinesePart = (unit) => {
@@ -709,7 +711,7 @@
                                                 @change="item.quantity = Math.min(Math.max(1, item.quantity), item.stock !== undefined ? item.stock : Infinity); updateQuantity(item, item.quantity)"
                                             >
                                             <button class="qty-btn" @click="updateQuantity(item, Math.min(item.stock !== undefined ? item.stock : Infinity, item.quantity + 1))" :disabled="item.stock !== undefined && item.quantity >= item.stock">+</button>
-                                            <span v-if="item.stock !== undefined && item.quantity >= item.stock" class="max-stock-msg" style="margin-left: 8px; color: #d9534f; font-size: 12px; font-weight: bold;">Max stock available / 缺货</span>
+                                            <span v-if="item.stock !== undefined && item.quantity >= item.stock" class="max-stock-msg" style="margin-left: 8px; color: #d9534f; font-size: 12px; font-weight: bold;">{{ t('maxstock') }}</span>
                                         </div>
                                     </td>
                                     <td class="total-cell">${{ formatCurrency(item.subtotal || 0) }}</td>
