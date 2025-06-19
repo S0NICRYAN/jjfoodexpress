@@ -627,7 +627,7 @@
         <header>
             <div class="header-content">
                 <div class="logo">
-                    <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
+                    <img src="/logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
                 </div>
                 <div class="language-toggle" @click="toggleLanguage">
                     <span v-if="currentLang === 'zh'">English</span>
@@ -690,7 +690,7 @@
                                 <tr v-for="(item, index) in orderItems" :key="item.id">
                                     <td>
                                         <div class="product-info">
-                                            <img :src="item.image || 'logo.png'" :alt="item.name" class="product-image">
+                                            <img :src="item.image || '/logo.png'" :alt="item.name" class="product-image">
                                             <div class="product-details">
                                                 <h3>{{ item.name }}</h3>
                                                 <p>{{ item.chinese }}</p>

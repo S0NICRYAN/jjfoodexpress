@@ -19,7 +19,7 @@
         <header>
             <div class="header-content">
                 <div class="logo">
-                    <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
+                    <img src="/logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
                 </div>
                 <div class="header-actions">
                     <div v-if="isAuthenticated" class="user-info">
@@ -90,7 +90,7 @@
                         <input type="file" id="productImage" class="form-control" @change="handleImageSelected" accept="image/*">
                         <div class="file-size-info">{{ t('imageSizeInfo') }}</div>
                         <div class="image-preview">
-                            <img :src="imagePreview || 'logo.png'" alt="Product Preview">
+                            <img :src="imagePreview || '/logo.png'" alt="Product Preview">
                         </div>
                     </div>
                     <div class="form-actions">
@@ -126,7 +126,7 @@
                         <tbody>
                             <tr v-for="product in filteredProducts" :key="product.id">
                                 <td>
-                                    <img :src="product.imageData || product.image || 'logo.png'" :alt="product.name" class="table-image">
+                                    <img :src="product.imageData || product.image || '/logo.png'" :alt="product.name" class="table-image">
                                 </td>
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.cname }}</td>
