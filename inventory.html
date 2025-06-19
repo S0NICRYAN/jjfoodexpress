@@ -133,7 +133,7 @@
                         <tbody>
                             <tr v-for="product in filteredProducts" :key="product.id">
                                 <td>
-                                    <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">
+                                    <img :src="product.imageData || product.image || 'logo.png'" :alt="product.name" class="table-image">
                                 </td>
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.cname }}</td>
@@ -363,8 +363,8 @@
                     productUnit.value = matchingUnit || product.unit || '包 (PACK)';
                     productUOM.value = product.UOM;
                     productStock.value = product.stock;
-                    imagePreview.value = product.imageData || product.image || '';
-                    imageData.value = product.imageData || '';
+                    imagePreview.value = product.imageData || product.image || 'logo.png';
+                    imageData.value = product.imageData || 'logo.png';
                     
                     // Scroll to the form
                     document.getElementById('product-form').scrollIntoView({ behavior: 'smooth' });
