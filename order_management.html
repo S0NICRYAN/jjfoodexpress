@@ -11,9 +11,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://unpkg.com/jspdf-font-asian@0.0.3/dist/SimSun-normal.js"></script>
     <style>
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
         .modal-content {
             background-color: #fefefe;
-            margin: 5% auto;
+            margin: 0;
             padding: 25px;
             border: 1px solid #888;
             width: 90%;
@@ -21,8 +33,12 @@
             border-radius: 8px;
             max-height: 85vh;
             overflow-y: auto;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.15);
         }
-
+        .items-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
         .modal-header {
             display: flex;
             justify-content: space-between;
@@ -104,11 +120,13 @@
 
         @media (max-width: 768px) {
             .modal-content {
-                width: 95%;
-                margin: 2% auto;
-                padding: 15px;
+                width: 98vw;
+                margin: 0;
+                padding: 10px;
             }
-            
+            .items-table-wrapper {
+                overflow-x: auto;
+            }
             .details-row {
                 flex-direction: column;
                 gap: 4px;
@@ -312,6 +330,7 @@
                             <!-- Order Items -->
                             <div class="details-section">
                                 <h3>{{ t('orderItems') }}</h3>
+                                <div class="items-table-wrapper">
                                 <table class="items-table">
                                     <thead>
                                         <tr>
@@ -328,7 +347,7 @@
                                             <td>{{ index + 1 }}</td>
                                             <td>{{ item.name }}</td>
                                             <td>{{ item.quantity }}</td>
-                                            <td>{{ item.unit }} ({{ item.unitChinese }})</td>
+                                            <td>{{ item.UOM || item.unitChinese || item.unit }}</td>
                                             <td>${{ item.price?.toFixed(2) }}</td>
                                             <td>${{ item.subtotal?.toFixed(2) }}</td>
                                         </tr>
@@ -360,6 +379,7 @@
                                         </tr>
                                     </tfoot>
                                 </table>
+                                </div>
                             </div>
                             
                             <!-- Remarks -->
@@ -755,8 +775,8 @@
                                     if (!combinedItems[key]) {
                                         combinedItems[key] = {
                                             name: item.name,
-                                            unit: item.unit,
                                             UOM: item.UOM,
+                                            unit: item.unit,
                                             unitChinese: item.unitChinese,
                                             quantity: 0,
                                             price: item.price,
@@ -873,7 +893,7 @@
                                 y = 20;
                             }
                             
-                            const uomValue = item.UOM || item.unitChinese || '';
+                            const uomValue = item.UOM || item.unitChinese || item.unit || '';
                             
                             // Convert Chinese characters to placeholder for now
                             let itemName = item.name || '';
