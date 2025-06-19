@@ -289,144 +289,143 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Order Details Modal -->
-                <div id="orderModal" class="modal" :style="{display: showModal ? 'block' : 'none'}">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h2>{{ t('orderDetails') }} - {{ selectedOrder?.orderId }}</h2>
-                            <span class="close" @click="closeModal">&times;</span>
-                        </div>
-                        
-                        <div v-if="selectedOrder" class="order-details">
-                            <!-- Order Information -->
-                            <div class="details-section">
-                                <h3>{{ t('orderInformation') }}</h3>
-                                <div class="details-row">
-                                    <span class="details-label">{{ t('orderId') }}:</span>
-                                    <span class="details-value">{{ selectedOrder.orderId }}</span>
-                                </div>
-                                <div class="details-row">
-                                    <span class="details-label">{{ t('orderDate') }}:</span>
-                                    <span class="details-value">{{ formatDateTime(selectedOrder.createdAt) }}</span>
-                                </div>
-                                <div class="details-row">
-                                    <span class="details-label">{{ t('deliveryDate') }}:</span>
-                                    <span class="details-value">{{ selectedOrder.deliveryDate || '-' }}</span>
-                                </div>
-                                <div class="details-row">
-                                    <span class="details-label">{{ t('status') }}:</span>
-                                    <span class="details-value">{{ getStatusText(selectedOrder?.status) }}</span>
-                                </div>
-                                <div class="details-row" v-if="selectedOrder.referenceNumber">
-                                    <span class="details-label">{{ t('referenceNumber') }}:</span>
-                                    <span class="details-value">{{ selectedOrder.referenceNumber }}</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Outlet Information -->
-                            <div class="details-section">
-                                <h3>{{ t('outletInformation') }}</h3>
-                                <div class="details-row">
-                                    <span class="details-label">{{ t('outletCode') }}:</span>
-                                    <span class="details-value">{{ selectedOrder.outletId }}</span>
-                                </div>
-                                <div class="details-row">
-                                    <span class="details-label">{{ t('outletName') }}:</span>
-                                    <span class="details-value">{{ selectedOrder.outletName }}</span>
-                                </div>
-                                <div class="details-row">
-                                    <span class="details-label">{{ t('outletAddress') }}:</span>
-                                    <span class="details-value">{{ selectedOrder.outletAddress }}</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Order Items -->
-                            <div class="details-section">
-                                <h3>{{ t('orderItems') }}</h3>
-                                <div class="items-table-wrapper">
-                                <table class="items-table">
-                                    <thead>
-                                        <tr>
-                                            <th>{{ t('serialNumber') || 'S/N' }}</th>
-                                            <th>{{ t('productName') }}</th>
-                                            <th>{{ t('quantity') }}</th>
-                                            <th>{{ t('unit') }}</th>
-                                            <th>{{ t('price') }}</th>
-                                            <th>{{ t('subtotal') }}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="(item, index) in selectedOrder.items" :key="index">
-                                            <td>{{ index + 1 }}</td>
-                                            <td>{{ item.name }}</td>
-                                            <td>{{ item.quantity }}</td>
-                                            <td>{{ item.UOM || item.unitChinese || item.unit }}</td>
-                                            <td>${{ item.price?.toFixed(2) }}</td>
-                                            <td>${{ item.subtotal?.toFixed(2) }}</td>
-                                        </tr>
-                                    </tbody>
-                                    <tfoot>
-                                        <tr>
-                                            <td colspan="5" style="text-align: right; font-weight: bold;">
-                                                {{ t('subtotal') }}:
-                                            </td>
-                                            <td style="font-weight: bold;">
-                                                ${{ selectedOrder.subTotal?.toFixed(2) || '0.00' }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td colspan="5" style="text-align: right; font-weight: bold;">
-                                                {{ t('gst') }} (9%):
-                                            </td>
-                                            <td style="font-weight: bold;">
-                                                ${{ ((selectedOrder.subTotal || 0) * 0.09).toFixed(2) }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td colspan="5" style="text-align: right; font-weight: bold; font-size: 1.1em;">
-                                                {{ t('grandTotal') }}:
-                                            </td>
-                                            <td style="font-weight: bold; font-size: 1.1em;">
-                                                ${{ selectedOrder.grandTotal?.toFixed(2) || '0.00' }}
-                                            </td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                                </div>
-                            </div>
-                            
-                            <!-- Remarks -->
-                            <div class="details-section" v-if="selectedOrder.remarks">
-                                <h3>{{ t('remarks') }}</h3>
-                                <p>{{ selectedOrder.remarks }}</p>
-                            </div>
-                        </div>
-                        
-                        <div class="modal-actions">
-                            <button class="btn btn-pdf" @click="downloadPDF">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
-                                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                                </svg>
-                                {{ t('downloadInvoice') }}
-                            </button>
-                            <button v-if="selectedOrder?.status?.toLowerCase() === 'cancelled'" class="btn btn-primary" @click="updateOrderStatus(selectedOrder, 'pending')" :disabled="updatingStatus">
-                                {{ updatingStatus ? t('updating') : t('undoCancellation') }}
-                            </button>
-                            <button v-if="selectedOrder?.status?.toLowerCase() === 'pending' || selectedOrder?.status?.toLowerCase() === 'processing'" class="btn btn-danger" @click="updateOrderStatus(selectedOrder, 'cancelled')" :disabled="updatingStatus">
-                                {{ updatingStatus ? t('updating') : t('cancelOrder') }}
-                            </button>
-                            <button class="btn btn-secondary" @click="closeModal">{{ t('close') }}</button>
-                        </div>
-                    </div>
-                </div>
             </div>
             
             <!-- Not authenticated message -->
             <div v-else class="auth-error">
                 <h2>{{ t('notAuthorized') || 'Not Authorized' }}</h2>
                 <p>{{ t('redirectingToLogin') || 'You are not authorized to access this page. Redirecting to home...' }}</p>
+            </div>
+        </div>
+        <!-- Order Details Modal (moved outside .container) -->
+        <div id="orderModal" class="modal" :style="{display: showModal ? 'block' : 'none'}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>{{ t('orderDetails') }} - {{ selectedOrder?.orderId }}</h2>
+                    <span class="close" @click="closeModal">&times;</span>
+                </div>
+                
+                <div v-if="selectedOrder" class="order-details">
+                    <!-- Order Information -->
+                    <div class="details-section">
+                        <h3>{{ t('orderInformation') }}</h3>
+                        <div class="details-row">
+                            <span class="details-label">{{ t('orderId') }}:</span>
+                            <span class="details-value">{{ selectedOrder.orderId }}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">{{ t('orderDate') }}:</span>
+                            <span class="details-value">{{ formatDateTime(selectedOrder.createdAt) }}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">{{ t('deliveryDate') }}:</span>
+                            <span class="details-value">{{ selectedOrder.deliveryDate || '-' }}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">{{ t('status') }}:</span>
+                            <span class="details-value">{{ getStatusText(selectedOrder?.status) }}</span>
+                        </div>
+                        <div class="details-row" v-if="selectedOrder.referenceNumber">
+                            <span class="details-label">{{ t('referenceNumber') }}:</span>
+                            <span class="details-value">{{ selectedOrder.referenceNumber }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Outlet Information -->
+                    <div class="details-section">
+                        <h3>{{ t('outletInformation') }}</h3>
+                        <div class="details-row">
+                            <span class="details-label">{{ t('outletCode') }}:</span>
+                            <span class="details-value">{{ selectedOrder.outletId }}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">{{ t('outletName') }}:</span>
+                            <span class="details-value">{{ selectedOrder.outletName }}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="details-label">{{ t('outletAddress') }}:</span>
+                            <span class="details-value">{{ selectedOrder.outletAddress }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Items -->
+                    <div class="details-section">
+                        <h3>{{ t('orderItems') }}</h3>
+                        <div class="items-table-wrapper">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>{{ t('serialNumber') || 'S/N' }}</th>
+                                    <th>{{ t('productName') }}</th>
+                                    <th>{{ t('quantity') }}</th>
+                                    <th>{{ t('unit') }}</th>
+                                    <th>{{ t('price') }}</th>
+                                    <th>{{ t('subtotal') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, index) in selectedOrder.items" :key="index">
+                                    <td>{{ index + 1 }}</td>
+                                    <td>{{ item.name }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ item.UOM || item.unitChinese || item.unit }}</td>
+                                    <td>${{ item.price?.toFixed(2) }}</td>
+                                    <td>${{ item.subtotal?.toFixed(2) }}</td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5" style="text-align: right; font-weight: bold;">
+                                        {{ t('subtotal') }}:
+                                    </td>
+                                    <td style="font-weight: bold;">
+                                        ${{ selectedOrder.subTotal?.toFixed(2) || '0.00' }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" style="text-align: right; font-weight: bold;">
+                                        {{ t('gst') }} (9%):
+                                    </td>
+                                    <td style="font-weight: bold;">
+                                        ${{ ((selectedOrder.subTotal || 0) * 0.09).toFixed(2) }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" style="text-align: right; font-weight: bold; font-size: 1.1em;">
+                                        {{ t('grandTotal') }}:
+                                    </td>
+                                    <td style="font-weight: bold; font-size: 1.1em;">
+                                        ${{ selectedOrder.grandTotal?.toFixed(2) || '0.00' }}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Remarks -->
+                    <div class="details-section" v-if="selectedOrder.remarks">
+                        <h3>{{ t('remarks') }}</h3>
+                        <p>{{ selectedOrder.remarks }}</p>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button class="btn btn-pdf" @click="downloadPDF">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                        </svg>
+                        {{ t('downloadInvoice') }}
+                    </button>
+                    <button v-if="selectedOrder?.status?.toLowerCase() === 'cancelled'" class="btn btn-primary" @click="updateOrderStatus(selectedOrder, 'pending')" :disabled="updatingStatus">
+                        {{ updatingStatus ? t('updating') : t('undoCancellation') }}
+                    </button>
+                    <button v-if="selectedOrder?.status?.toLowerCase() === 'pending' || selectedOrder?.status?.toLowerCase() === 'processing'" class="btn btn-danger" @click="updateOrderStatus(selectedOrder, 'cancelled')" :disabled="updatingStatus">
+                        {{ updatingStatus ? t('updating') : t('cancelOrder') }}
+                    </button>
+                    <button class="btn btn-secondary" @click="closeModal">{{ t('close') }}</button>
+                </div>
             </div>
         </div>
     </div>
@@ -969,15 +968,10 @@
                         
                         // Order references
                         y += 15;
-                        doc.text('Order References:', 20, y);
-                        y += 6;
-                        
-                        const orderRefs = relatedOrders.map(o => o.orderId).join(', ');
-                        const refLines = doc.splitTextToSize(orderRefs, 160);
-                        refLines.forEach(line => {
-                            doc.text(line, 20, y);
+                        if (order.remarks && order.remarks.trim() !== '') {
+                            doc.text('Remarks:', 20, y);
                             y += 6;
-                        });
+                        }
                         
                         // Save PDF
                         doc.save(`Invoice_${order.outletId}_${formatDate(invoiceDate).replace(/\//g, '')}.pdf`);
