@@ -90,7 +90,7 @@
                         <input type="file" id="productImage" class="form-control" @change="handleImageSelected" accept="image/*">
                         <div class="file-size-info">{{ t('imageSizeInfo') }}</div>
                         <div class="image-preview">
-                            <img :src="imagePreview || '/logo.png'" alt="Product Preview">
+                            <img :src="imagePreview" alt="Product Preview">
                         </div>
                     </div>
                     <div class="form-actions">
