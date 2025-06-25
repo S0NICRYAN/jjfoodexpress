@@ -57,40 +57,27 @@
                     {{ message.text }}
                 </div>
                 
-                <!-- Outlet selection -->
+                <!-- Outlet selection with prefix filter -->
                 <div class="card">
                     <div class="form-group">
+                        <label for="outletPrefix">{{ t('selectOutletPrefix') }} <span class="english-subtext" v-if="currentLang === 'zh'">Outlet Code Prefix:</span></label>
+                        <select id="outletPrefix" class="form-control" v-model="selectedPrefix">
+                            <option value="">{{ t('selectPrefixPlaceholder') }}</option>
+                            <option v-for="prefix in outletPrefixes" :key="prefix" :value="prefix">{{ prefix }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="outlet">{{ t('selectOutlet') }} <span class="english-subtext" v-if="currentLang === 'zh'">Select Outlet:</span></label>
-                        
-                        <!-- Loading state for outlets -->
-                        <div v-if="isLoadingOutlets" class="loading-inline">
-                            {{ t('loadingOutlets') }}
-                        </div>
-                        
-                        <!-- Error message for outlets -->
-                        <div v-else-if="outletMessage.text" :class="['message', outletMessage.type === 'success' ? 'message-success' : 'message-error']">
-                            {{ outletMessage.text }}
-                        </div>
-                        
-                        <!-- Outlet dropdown -->
-                        <div v-else>
-                            <input 
-                                type="text" 
-                                class="form-control" 
-                                v-model="outletFilter" 
-                                :placeholder="t('filterOutlets')"
-                                style="margin-bottom: 10px;">
-                            <select 
-                                id="outlet" 
-                                class="form-control" 
-                                v-model="selectedOutlet" 
-                                :disabled="filteredOutlets.length === 0 || isLoadingOutlets">
-                                <option value="">{{ t('selectOutletPlaceholder') }}</option>
-                                <option v-for="outlet in filteredOutlets" :key="outlet.id" :value="outlet.id">
-                                    {{ outlet.name }}
-                                </option>
-                            </select>
-                        </div>
+                        <select 
+                            id="outlet" 
+                            class="form-control" 
+                            v-model="selectedOutlet" 
+                            :disabled="filteredOutletsByPrefix.length === 0 || isLoadingOutlets">
+                            <option value="">{{ t('selectOutletPlaceholder') }}</option>
+                            <option v-for="outlet in filteredOutletsByPrefix" :key="outlet.id" :value="outlet.id">
+                                {{ outlet.name }}
+                            </option>
+                        </select>
                     </div>
                 </div>
                 
@@ -407,6 +394,14 @@
                     filterOutlets: {
                         zh: '过滤门店',
                         en: 'Filter outlets'
+                    },
+                    selectOutletPrefix: {
+                        zh: '选择门店前缀',
+                        en: 'Select Outlet Prefix'
+                    },
+                    selectPrefixPlaceholder: {
+                        zh: '请选择前缀',
+                        en: 'Please select a prefix'
                     }
                 };
                 
@@ -452,6 +447,23 @@
                     '袋 (BAG)',
                     '条 (STRIP)'
                 ]);
+                
+                // Add refs and computed
+                const selectedPrefix = ref('');
+                // Compute all unique prefixes
+                const outletPrefixes = computed(() => {
+                    const set = new Set();
+                    outlets.value.forEach(outlet => {
+                        const dashIdx = outlet.id.indexOf('-');
+                        if (dashIdx > 0) set.add(outlet.id.substring(0, dashIdx));
+                    });
+                    return Array.from(set).sort();
+                });
+                // Filter outlets by selected prefix
+                const filteredOutletsByPrefix = computed(() => {
+                    if (!selectedPrefix.value) return [];
+                    return outlets.value.filter(outlet => outlet.id.startsWith(selectedPrefix.value + '-'));
+                });
                 
                 // Function to load outlets from Firestore
                 const loadOutlets = async () => {
@@ -589,7 +601,7 @@
                     return outletProducts.value.some(product => product.id === productId);
                 };
                 
-                // Add product to outlet
+                // Add product to outlet (store only productId and addedAt)
                 const addToOutlet = async (product) => {
                     if (!selectedOutlet.value) {
                         message.value = { type: 'error', text: t('selectOutletFirst') };
@@ -604,10 +616,10 @@
                     message.value = { type: '', text: '' };
                     
                     try {
-                        // Add product to the outlet's products subcollection
+                        // Add product to the outlet's products subcollection (only productId and addedAt)
                         const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
                         await setDoc(productRef, {
-                            ...product,
+                            productId: product.id,
                             addedAt: serverTimestamp()
                         });
                         
@@ -714,18 +726,6 @@
                     localStorage.setItem('preferred_language', currentLang.value);
                 };
                 
-                // Filter outlets
-                const filteredOutlets = computed(() => {
-                    if (!outletFilter.value) {
-                        return outlets.value;
-                    }
-                    
-                    const query = outletFilter.value.toLowerCase();
-                    return outlets.value.filter(outlet => 
-                        outlet.name.toLowerCase().includes(query)
-                    );
-                });
-                
                 return {
                     currentLang,
                     languages,
@@ -753,7 +753,9 @@
                     goBack,
                     message,
                     outletFilter,
-                    filteredOutlets
+                    filteredOutletsByPrefix,
+                    selectedPrefix,
+                    outletPrefixes
                 };
             }
         }).mount('#app');
