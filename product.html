@@ -219,12 +219,7 @@
                         <h4>{{ t('productsToImport') }} <span class="english-subtext" v-if="currentLang === 'zh'">Products to Import:</span></h4>
                         <div class="source-products-list">
                             <div v-for="product in productsToImport" :key="product.id" class="source-product-item">
-                                <img :src="product.imageData || product.image || '/api/placeholder/40/40'" :alt="product.name" class="source-product-image">
-                                <div class="source-product-info">
-                                    <div class="source-product-name">{{ product.name }}</div>
-                                    <div class="source-product-cname">{{ product.cname }}</div>
-                                </div>
-                                <div class="source-product-price">${{ product.price }}</div>
+                                <div class="source-product-name">{{ product.name }}</div>
                             </div>
                         </div>
                         <div class="import-summary">
