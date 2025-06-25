@@ -79,133 +79,73 @@
                                 class="form-control" 
                                 v-model="selectedOutlet" 
                                 :disabled="outlets.length === 0 || isLoadingOutlets">
-                                <option v-for="outlet in outlets" :key="outlet.id" :value="outlet.id">
-                                    {{ outlet.name }}
-                                </option>
-                            </select>
-                            <div class="import-section">
-                                <button 
-                                    v-if="outlets.length > 0" 
-                                    class="btn btn-primary import-products-btn" 
-                                    @click="showCopyModal = true"
-                                    :disabled="isLoadingOutlets">
-                                    {{ t('importProducts') }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Copy Products Modal -->
-                <div v-if="showCopyModal" class="modal-overlay">
-                    <div class="modal-content">
-                        <h3>{{ t('importProducts') }}</h3>
-                        <p>{{ t('importProductsDescription') }}</p>
-                        
-                        <div class="form-group">
-                            <label for="sourceOutlet">{{ t('selectSourceOutlet') }}</label>
-                            <select 
-                                id="sourceOutlet" 
-                                class="form-control" 
-                                v-model="sourceOutlet"
-                                :disabled="isCopying">
+                                <option value="">{{ t('selectOutletPlaceholder') }}</option>
                                 <option v-for="outlet in outlets" :key="outlet.id" :value="outlet.id">
                                     {{ outlet.name }}
                                 </option>
                             </select>
                         </div>
-
-                        <div class="modal-actions">
-                            <button 
-                                class="btn btn-primary" 
-                                @click="copyProducts" 
-                                :disabled="!sourceOutlet || isCopying">
-                                {{ isCopying ? t('importing') : t('startImport') }}
-                            </button>
-                            <button 
-                                class="btn btn-secondary" 
-                                @click="showCopyModal = false"
-                                :disabled="isCopying">
-                                {{ t('cancel') }}
-                            </button>
-                        </div>
                     </div>
                 </div>
                 
-                <!-- Product Form -->
-                <h2 id="product-form">{{ isEditing ? t('editProduct') : t('addNewProduct') }}
-                    <span class="english-subtext" v-if="currentLang === 'zh'">{{ isEditing ? 'Edit Product' : 'Add New Product' }}</span>
-                </h2>
-                <div class="card">
-                    <div class="form-row">
-                        <div class="form-group-flex">
-                            <label for="productName">{{ t('productNameEn') }} <span class="english-subtext" v-if="currentLang === 'zh'">Product Name (English):</span></label>
-                            <input type="text" id="productName" class="form-control" v-model="productName" :placeholder="t('enterProductName')">
+                <!-- Current Outlet Products -->
+                <div v-if="selectedOutlet">
+                    <h2>{{ t('currentOutletProducts') }} <span class="english-subtext" v-if="currentLang === 'zh'">Current Outlet Products</span></h2>
+                    <div class="card">
+                        <div class="search-container">
+                            <input type="text" class="search-input" v-model="outletSearchQuery" :placeholder="t('searchOutletProducts')">
                         </div>
                         
-                        <div class="form-group-flex">
-                            <label for="productChineseName">{{ t('productNameCn') }} <span class="english-subtext" v-if="currentLang === 'zh'">Product Name (Chinese):</span></label>
-                            <input type="text" id="productChineseName" class="form-control" v-model="productChineseName" :placeholder="t('enterChineseName')">
-                        </div>
-                    </div>
-                    <br>
-                    <div class="form-row">
-                        <div class="form-group-flex">
-                            <label for="productPrice">{{ t('price') }} <span class="english-subtext" v-if="currentLang === 'zh'">Price:</span></label>
-                            <input type="number" id="productPrice" class="form-control" v-model="productPrice" :placeholder="t('enterPrice')" step="0.01">
+                        <div v-if="isLoadingOutletProducts" class="loading">{{ t('loadingOutletProducts') }}</div>
+                        
+                        <div v-else-if="outletProducts.length === 0" class="empty-state">
+                            {{ t('noOutletProductsFound') }}
                         </div>
                         
-                        <div class="form-group-flex">
-                            <label for="productUnit">{{ t('unit') }} <span class="english-subtext" v-if="currentLang === 'zh'">Unit:</span></label>
-                            <select id="productUnit" class="form-control" v-model="productUnit">
-                                <option v-for="unit in unitOptions" :key="unit" :value="unit">{{ unit }}</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group-flex">
-                            <label for="productUOM">{{ t('uom') }} <span class="english-subtext" v-if="currentLang === 'zh'">UOM:</span></label>
-                            <input type="text" id="productUOM" class="form-control" v-model="productUOM" :placeholder="t('enterUOM')">
-                        </div>
-                    </div>
-                    <br>
-                    
-                    <div class="form-group">
-                        <label for="productImage">{{ t('productImage') }} <span class="english-subtext" v-if="currentLang === 'zh'">Product Image:</span></label>
-                        <input type="file" id="productImage" class="form-control" @change="handleImageSelected" accept="image/*">
-                        &nbsp;
-                        <div class="file-size-info">{{ t('imageSizeInfo') }}</div>
-                        
-                        <div class="image-preview">
-                            <img v-if="imagePreview" :src="imagePreview" alt="Product Preview">
-                            <div v-else class="image-preview-empty">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
-                                    <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-                                    <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
-                                </svg>
-                                {{ t('noImageSelected') }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button class="btn btn-primary" @click="submitForm" :disabled="isSubmitting">
-                            {{ isSubmitting ? t('saving') : (isEditing ? t('updateProduct') : t('addProduct')) }}
-                        </button>
-                        <button v-if="isEditing" class="btn btn-secondary" @click="resetForm">{{ t('cancelEditing') }}</button>
+                        <table v-else class="product-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 70px;">{{ t('image') }}</th>
+                                    <th>{{ t('productName') }}</th>
+                                    <th>{{ t('chineseName') }}</th>
+                                    <th>{{ t('price') }}</th>
+                                    <th>{{ t('unit') }}</th>
+                                    <th>{{ t('uom') }}</th>
+                                    <th>{{ t('actions') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="product in filteredOutletProducts" :key="product.id">
+                                    <td>
+                                        <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">
+                                    </td>
+                                    <td>{{ product.name }}</td>
+                                    <td>{{ product.cname }}</td>
+                                    <td>${{ product.price }}</td>
+                                    <td>{{ currentLang === 'en' ? getUnitDisplay(product.unit) : product.unit }}</td>
+                                    <td>{{ product.UOM }}</td>
+                                    <td>
+                                        <div class="table-actions">
+                                            <button class="btn btn-danger" @click="removeFromOutlet(product)">{{ t('remove') }}</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
                 
-                <!-- Product List -->
-                <h2>{{ t('productList') }} <span class="english-subtext" v-if="currentLang === 'zh'">Product List</span></h2>
+                <!-- All Products Section -->
+                <h2>{{ t('allProducts') }} <span class="english-subtext" v-if="currentLang === 'zh'">All Products</span></h2>
                 <div class="card">
                     <div class="search-container">
-                        <input type="text" class="search-input" v-model="searchQuery" :placeholder="t('searchProducts')">
+                        <input type="text" class="search-input" v-model="allProductsSearchQuery" :placeholder="t('searchAllProducts')">
                     </div>
                     
-                    <div v-if="isLoading" class="loading">{{ t('loadingProducts') }}</div>
+                    <div v-if="isLoadingAllProducts" class="loading">{{ t('loadingAllProducts') }}</div>
                     
-                    <div v-else-if="products.length === 0" class="empty-state">
-                        {{ t('noProductsFound') }}
+                    <div v-else-if="allProducts.length === 0" class="empty-state">
+                        {{ t('noAllProductsFound') }}
                     </div>
                     
                     <table v-else class="product-table">
@@ -221,9 +161,10 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="product in filteredProducts" :key="product.id">
+                            <tr v-for="product in filteredAllProducts" :key="product.id">
                                 <td>
-                                    <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">                                </td>
+                                    <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">
+                                </td>
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.cname }}</td>
                                 <td>${{ product.price }}</td>
@@ -231,8 +172,12 @@
                                 <td>{{ product.UOM }}</td>
                                 <td>
                                     <div class="table-actions">
-                                        <button class="btn btn-secondary" @click="editProduct(product)">{{ t('edit') }}</button>
-                                        <button class="btn btn-danger" @click="deleteProduct(product)">{{ t('delete') }}</button>
+                                        <button 
+                                            class="btn btn-primary" 
+                                            @click="addToOutlet(product)"
+                                            :disabled="!selectedOutlet || isProductInOutlet(product.id)">
+                                            {{ isProductInOutlet(product.id) ? t('alreadyAdded') : t('addToOutlet') }}
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -324,77 +269,41 @@
                         zh: '选择门店',
                         en: 'Select Outlet'
                     },
-                    addNewProduct: {
-                        zh: '添加新产品',
-                        en: 'Add New Product'
+                    selectOutletPlaceholder: {
+                        zh: '请选择门店',
+                        en: 'Please select an outlet'
                     },
-                    editProduct: {
-                        zh: '编辑产品',
-                        en: 'Edit Product'
+                    currentOutletProducts: {
+                        zh: '当前门店产品',
+                        en: 'Current Outlet Products'
                     },
-                    productNameEn: {
-                        zh: '产品名称 (英文)',
-                        en: 'Product Name (English)'
+                    allProducts: {
+                        zh: '所有产品',
+                        en: 'All Products'
                     },
-                    productNameCn: {
-                        zh: '产品名称 (中文)',
-                        en: 'Product Name (Chinese)'
+                    searchOutletProducts: {
+                        zh: '搜索门店产品...',
+                        en: 'Search outlet products...'
                     },
-                    price: {
-                        zh: '价格',
-                        en: 'Price'
+                    searchAllProducts: {
+                        zh: '搜索所有产品...',
+                        en: 'Search all products...'
                     },
-                    unit: {
-                        zh: '单位',
-                        en: 'Unit'
+                    loadingOutletProducts: {
+                        zh: '加载门店产品中...',
+                        en: 'Loading outlet products...'
                     },
-                    uom: {
-                        zh: '计量单位',
-                        en: 'UOM (Unit of Measurement)'
+                    loadingAllProducts: {
+                        zh: '加载所有产品中...',
+                        en: 'Loading all products...'
                     },
-                    productImage: {
-                        zh: '产品图片:',
-                        en: 'Product Image:'
+                    noOutletProductsFound: {
+                        zh: '此门店暂无产品。',
+                        en: 'No products found in this outlet.'
                     },
-                    imageSizeInfo: {
-                        zh: '* 图片大小必须小于 1MB',
-                        en: '* Images must be under 1MB in size'
-                    },
-                    noImageSelected: {
-                        zh: '未选择图片',
-                        en: 'No image selected'
-                    },
-                    saving: {
-                        zh: '保存中...',
-                        en: 'Saving...'
-                    },
-                    updateProduct: {
-                        zh: '更新产品',
-                        en: 'Update Product'
-                    },
-                    addProduct: {
-                        zh: '添加产品',
-                        en: 'Add Product'
-                    },
-                    cancelEditing: {
-                        zh: '取消编辑',
-                        en: 'Cancel Editing'
-                    },
-                    productList: {
-                        zh: '产品列表',
-                        en: 'Product List'
-                    },
-                    searchProducts: {
-                        zh: '搜索产品...',
-                        en: 'Search products...'
-                    },
-                    loadingProducts: {
-                        zh: '加载产品中...',
-                        en: 'Loading products...'
-                    },
-                    noProductsFound: {
-                        zh: '未找到此门店的产品。',
-                        en: 'No products found for this outlet.'
+                    noAllProductsFound: {
+                        zh: '未找到产品。',
+                        en: 'No products found.'
                     },
                     image: {
                         zh: '图片',
@@ -408,73 +317,49 @@
                         zh: '中文名称',
                         en: 'Chinese Name'
                     },
+                    price: {
+                        zh: '价格',
+                        en: 'Price'
+                    },
+                    unit: {
+                        zh: '单位',
+                        en: 'Unit'
+                    },
+                    uom: {
+                        zh: '计量单位',
+                        en: 'UOM (Unit of Measurement)'
+                    },
                     actions: {
                         zh: '操作',
                         en: 'Actions'
                     },
-                    edit: {
-                        zh: '编辑',
-                        en: 'Edit'
+                    addToOutlet: {
+                        zh: '添加到门店',
+                        en: 'Add to Outlet'
                     },
-                    delete: {
-                        zh: '删除',
-                        en: 'Delete'
+                    remove: {
+                        zh: '移除',
+                        en: 'Remove'
                     },
-                    enterProductName: {
-                        zh: '输入产品名称',
-                        en: 'Enter product name'
+                    alreadyAdded: {
+                        zh: '已添加',
+                        en: 'Already Added'
                     },
-                    enterChineseName: {
-                        zh: '输入中文名称 (可选)',
-                        en: 'Enter Chinese name (optional)'
+                    addSuccess: {
+                        zh: '产品 "{0}" 已添加到门店。',
+                        en: 'Product "{0}" has been added to the outlet.'
                     },
-                    enterPrice: {
-                        zh: '输入价格',
-                        en: 'Enter price'
+                    removeSuccess: {
+                        zh: '产品 "{0}" 已从门店移除。',
+                        en: 'Product "{0}" has been removed from the outlet.'
                     },
-                    enterUOM: {
-                        zh: '例如：1KG, 500G, 5PCS (可选)',
-                        en: 'E.g., 1KG, 500G, 5PCS (optional)'
+                    addError: {
+                        zh: '添加产品失败: {0}',
+                        en: 'Failed to add product: {0}'
                     },
-                    deleteConfirm: {
-                        zh: '您确定要删除 "{0}" 吗？',
-                        en: 'Are you sure you want to delete "{0}"?'
-                    },
-                    successDelete: {
-                        zh: '产品 "{0}" 已被删除。',
-                        en: 'Product "{0}" has been deleted.'
-                    },
-                    failedDelete: {
-                        zh: '删除产品失败: {0}',
-                        en: 'Failed to delete product: {0}'
-                    },
-                    successUpdate: {
-                        zh: '产品 "{0}" 已更新。',
-                        en: 'Product "{0}" has been updated.'
-                    },
-                    successAdd: {
-                        zh: '产品 "{0}" 已添加。',
-                        en: 'Product "{0}" has been added.'
-                    },
-                    failedSave: {
-                        zh: '保存产品失败: {0}',
-                        en: 'Failed to save product: {0}'
-                    },
-                    errorProductName: {
-                        zh: '请输入产品名称',
-                        en: 'Please enter a product name'
-                    },
-                    errorProductPrice: {
-                        zh: '请输入产品价格',
-                        en: 'Please enter a product price'
-                    },
-                    errorImageType: {
-                        zh: '请选择图片文件 (JPEG, PNG, GIF)',
-                        en: 'Please select an image file (JPEG, PNG, GIF)'
-                    },
-                    errorImageSize: {
-                        zh: '图片文件大小必须小于 1MB。请调整图片大小。',
-                        en: 'Image file size must be under 1MB. Please resize your image.'
+                    removeError: {
+                        zh: '移除产品失败: {0}',
+                        en: 'Failed to remove product: {0}'
                     },
                     loadingOutlets: {
                         zh: '加载门店中...',
@@ -504,38 +389,6 @@
                     back: {
                         zh: '返回',
                         en: 'Back'
-                    },
-                    importProducts: {
-                        zh: '导入产品',
-                        en: 'Import Products'
-                    },
-                    importProductsDescription: {
-                        zh: '选择要从中导入产品的门店。这将导入所有产品到当前选中的门店。',
-                        en: 'Select the outlet to import products from. This will import all products to the currently selected outlet.'
-                    },
-                    selectSourceOutlet: {
-                        zh: '选择源门店:',
-                        en: 'Select Source Outlet:'
-                    },
-                    startImport: {
-                        zh: '开始导入',
-                        en: 'Start Import'
-                    },
-                    importing: {
-                        zh: '导入中...',
-                        en: 'Importing...'
-                    },
-                    cancel: {
-                        zh: '取消',
-                        en: 'Cancel'
-                    },
-                    importSuccess: {
-                        zh: '成功导入 {0} 个产品',
-                        en: 'Successfully imported {0} products'
-                    },
-                    importError: {
-                        zh: '导入产品时出错: {0}',
-                        en: 'Error importing products: {0}'
                     }
                 };
                 
@@ -557,23 +410,17 @@
                 
                 // Form data
                 const selectedOutlet = ref('');
-                const productId = ref('');
-                const productName = ref('');
-                const productChineseName = ref('');
-                const productPrice = ref('');
-                const productUnit = ref('包 (PACK)');
-                const productUOM = ref('');
-                const imageFile = ref(null);
-                const imagePreview = ref('');
-                const imageData = ref('');
                 
                 // UI states
-                const isLoading = ref(false);
-                const isSubmitting = ref(false);
                 const message = ref({ type: '', text: '' });
-                const isEditing = ref(false);
-                const products = ref([]);
-                const searchQuery = ref('');
+                
+                // Product data
+                const outletProducts = ref([]);
+                const allProducts = ref([]);
+                const isLoadingOutletProducts = ref(false);
+                const isLoadingAllProducts = ref(false);
+                const outletSearchQuery = ref('');
+                const allProductsSearchQuery = ref('');
                 
                 // Units options
                 const unitOptions = ref([
@@ -586,11 +433,6 @@
                     '袋 (BAG)',
                     '条 (STRIP)'
                 ]);
-                
-                // Additional refs
-                const showCopyModal = ref(false);
-                const sourceOutlet = ref('');
-                const isCopying = ref(false);
                 
                 // Function to load outlets from Firestore
                 const loadOutlets = async () => {
@@ -616,13 +458,6 @@
                         
                         // Sort outlets by name for better UX
                         outlets.value.sort((a, b) => a.name.localeCompare(b.name));
-                        
-                        // Set default selected outlet if we have outlets
-                        if (outlets.value.length > 0) {
-                            selectedOutlet.value = outlets.value[0].id;
-                            // Load products for the default outlet
-                            await loadProducts();
-                        }
                     } catch (error) {
                         console.error('Error loading outlets:', error);
                         outletMessage.value = { type: 'error', text: t('outletLoadError', error.message) };
@@ -660,230 +495,162 @@
                     return unit;
                 };
                 
-                // Generate random product ID
-                const generateProductId = () => {
-                    const timestamp = new Date().getTime().toString().slice(-6);
-                    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-                    return `PRD-${timestamp}-${random}`;
-                };
-                
-                // Handle image selection
-                const handleImageSelected = (event) => {
-                    const file = event.target.files[0];
-                    if (!file) return;
-                    
-                    // Validate file type
-                    if (!file.type.match('image.*')) {
-                        message.value = { type: 'error', text: t('errorImageType') };
+                // Load outlet products
+                const loadOutletProducts = async () => {
+                    if (!selectedOutlet.value) {
+                        outletProducts.value = [];
                         return;
                     }
                     
-                    // Check file size - limit to 500KB
-                    if (file.size > 1 * 1024 * 1024) {
-                        message.value = { type: 'error', text: t('errorImageSize') };
-                        return;
-                    }
-                    
-                    // Read file as base64
-                    const reader = new FileReader();
-                    
-                    reader.onload = e => {
-                        imagePreview.value = e.target.result;
-                        imageData.value = e.target.result;
-                    };
-                    
-                    reader.readAsDataURL(file);
-                };
-                
-                // Reset form
-                const resetForm = () => {
-                    productId.value = '';
-                    productName.value = '';
-                    productChineseName.value = '';
-                    productPrice.value = '';
-                    productUnit.value = '包 (PACK)';
-                    productUOM.value = '';
-                    imageFile.value = null;
-                    imagePreview.value = '';
-                    imageData.value = '';
-                    isEditing.value = false;
-                    productId.value = generateProductId();
-                };
-                
-                // Load products
-                const loadProducts = async () => {
-                    if (!selectedOutlet.value) return;
-                    
-                    isLoading.value = true;
-                    message.value = { type: '', text: '' };
+                    isLoadingOutletProducts.value = true;
                     
                     try {
                         const productsRef = collection(db, `outlets/${selectedOutlet.value}/products`);
                         const snapshot = await getDocs(productsRef);
                         
                         if (snapshot.empty) {
-                            products.value = [];
+                            outletProducts.value = [];
                             return;
                         }
                         
-                        products.value = snapshot.docs.map(doc => {
+                        outletProducts.value = snapshot.docs.map(doc => {
                             return {
                                 id: doc.id,
                                 ...doc.data()
                             };
                         });
                     } catch (error) {
-                        console.error('Error loading products:', error);
+                        console.error('Error loading outlet products:', error);
                         message.value = { type: 'error', text: error.message };
                     } finally {
-                        isLoading.value = false;
+                        isLoadingOutletProducts.value = false;
                     }
                 };
                 
-                // Filter products
-                const filteredProducts = computed(() => {
-                    if (!searchQuery.value) {
-                        return products.value;
+                // Load all products from all outlets
+                const loadAllProducts = async () => {
+                    isLoadingAllProducts.value = true;
+                    
+                    try {
+                        const allProductsSet = new Map(); // Use Map to avoid duplicates
+                        
+                        // Get all outlets
+                        const outletsRef = collection(db, 'outlets');
+                        const outletsSnapshot = await getDocs(outletsRef);
+                        
+                        // For each outlet, get its products
+                        for (const outletDoc of outletsSnapshot.docs) {
+                            const outletId = outletDoc.id;
+                            const productsRef = collection(db, `outlets/${outletId}/products`);
+                            const productsSnapshot = await getDocs(productsRef);
+                            
+                            // Add products to the set (using product ID as key to avoid duplicates)
+                            productsSnapshot.docs.forEach(doc => {
+                                const productData = doc.data();
+                                if (!allProductsSet.has(doc.id)) {
+                                    allProductsSet.set(doc.id, {
+                                        id: doc.id,
+                                        ...productData
+                                    });
+                                }
+                            });
+                        }
+                        
+                        // Convert Map to array
+                        allProducts.value = Array.from(allProductsSet.values());
+                        
+                        // Sort by name
+                        allProducts.value.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                    } catch (error) {
+                        console.error('Error loading all products:', error);
+                        message.value = { type: 'error', text: error.message };
+                    } finally {
+                        isLoadingAllProducts.value = false;
+                    }
+                };
+                
+                // Check if product is already in the selected outlet
+                const isProductInOutlet = (productId) => {
+                    return outletProducts.value.some(product => product.id === productId);
+                };
+                
+                // Add product to outlet
+                const addToOutlet = async (product) => {
+                    if (!selectedOutlet.value) {
+                        message.value = { type: 'error', text: t('selectOutletFirst') };
+                        return;
                     }
                     
-                    const query = searchQuery.value.toLowerCase();
-                    return products.value.filter(product => 
+                    if (isProductInOutlet(product.id)) {
+                        message.value = { type: 'error', text: t('productAlreadyInOutlet') };
+                        return;
+                    }
+                    
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
+                        await setDoc(productRef, {
+                            ...product,
+                            addedAt: serverTimestamp()
+                        });
+                        
+                        message.value = { type: 'success', text: t('addSuccess', product.name) };
+                        await loadOutletProducts();
+                    } catch (error) {
+                        message.value = { type: 'error', text: t('addError', error.message) };
+                    }
+                };
+                
+                // Remove product from outlet
+                const removeFromOutlet = async (product) => {
+                    if (!confirm(t('removeConfirm', product.name))) {
+                        return;
+                    }
+                    
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
+                        await deleteDoc(productRef);
+                        
+                        message.value = { type: 'success', text: t('removeSuccess', product.name) };
+                        await loadOutletProducts();
+                    } catch (error) {
+                        message.value = { type: 'error', text: t('removeError', error.message) };
+                    }
+                };
+                
+                // Filter outlet products
+                const filteredOutletProducts = computed(() => {
+                    if (!outletSearchQuery.value) {
+                        return outletProducts.value;
+                    }
+                    
+                    const query = outletSearchQuery.value.toLowerCase();
+                    return outletProducts.value.filter(product => 
                         (product.name && product.name.toLowerCase().includes(query)) || 
                         (product.cname && product.cname.toLowerCase().includes(query)) ||
                         (product.id && product.id.toLowerCase().includes(query))
                     );
                 });
                 
-                // Edit product
-                const editProduct = (product) => {
-                    productId.value = product.id;
-                    productName.value = product.name || '';
-                    productChineseName.value = product.cname || '';
-                    productPrice.value = product.price || '';
-                    
-                    // Find the matching unit option for display
-                    const matchingUnit = unitOptions.value.find(u => extractChinesePart(u) === product.unit);
-                    productUnit.value = matchingUnit || product.unit || '包 (PACK)';
-                    
-                    productUOM.value = product.UOM || '';
-                    imagePreview.value = product.imageData || product.image || '';
-                    imageData.value = product.imageData || '';
-                    isEditing.value = true;
-                    
-                    // Scroll to form
-                    document.getElementById('product-form').scrollIntoView({ behavior: 'smooth' });
-                };
-                
-                // Delete product
-                const deleteProduct = async (product) => {
-                    if (!confirm(t('deleteConfirm', product.name))) {
-                        return;
+                // Filter all products
+                const filteredAllProducts = computed(() => {
+                    if (!allProductsSearchQuery.value) {
+                        return allProducts.value;
                     }
                     
-                    isSubmitting.value = true;
-                    message.value = { type: '', text: '' };
-                    
-                    try {
-                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
-                        await deleteDoc(productRef);
-                        message.value = { type: 'success', text: t('successDelete', product.name) };
-                        await loadProducts();
-                    } catch (error) {
-                        message.value = { type: 'error', text: t('failedDelete', error.message) };
-                    } finally {
-                        isSubmitting.value = false;
-                    }
-                };
-                
-                // Submit form
-                const submitForm = async () => {
-                    if (!productId.value) {
-                        message.value = { type: 'error', text: t('errorProductId') };
-                        return;
-                    }
-                    
-                    if (!productName.value) {
-                        message.value = { type: 'error', text: t('errorProductName') };
-                        return;
-                    }
-                    
-                    isSubmitting.value = true;
-                    message.value = { type: '', text: '' };
-                    
-                    try {
-                        const productData = {
-                            name: productName.value,
-                            cname: productChineseName.value,
-                            price: parseFloat(productPrice.value) || 0,
-                            UOM: productUOM.value,
-                            unit: extractChinesePart(productUnit.value),
-                            imageData: imageData.value,
-                            updatedAt: serverTimestamp()
-                        };
-                        
-                        if (!isEditing.value) {
-                            productData.createdAt = serverTimestamp();
-                        }
-                        
-                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, productId.value);
-                        
-                        if (isEditing.value) {
-                            await updateDoc(productRef, productData);
-                            message.value = { type: 'success', text: t('successUpdate', productName.value) };
-                        } else {
-                            await setDoc(productRef, productData);
-                            message.value = { type: 'success', text: t('successAdd', productName.value) };
-                        }
-                        
-                        resetForm();
-                        await loadProducts();
-                    } catch (error) {
-                        message.value = { type: 'error', text: t('failedSave', error.message) };
-                    } finally {
-                        isSubmitting.value = false;
-                    }
-                };
-                
-                // Copy products
-                const copyProducts = async () => {
-                    if (!sourceOutlet.value || !selectedOutlet.value) {
-                        message.value = { type: 'error', text: t('errorSelectOutlets') };
-                        return;
-                    }
-                    
-                    isCopying.value = true;
-                    message.value = { type: '', text: '' };
-                    
-                    try {
-                        const sourceRef = collection(db, `outlets/${sourceOutlet.value}/products`);
-                        const targetRef = collection(db, `outlets/${selectedOutlet.value}/products`);
-                        
-                        const snapshot = await getDocs(sourceRef);
-                        let copiedCount = 0;
-                        
-                        for (const doc of snapshot.docs) {
-                            const productData = doc.data();
-                            await setDoc(doc(targetRef, doc.id), {
-                                ...productData,
-                                createdAt: serverTimestamp(),
-                                updatedAt: serverTimestamp()
-                            });
-                            copiedCount++;
-                        }
-                        
-                        message.value = { type: 'success', text: t('importSuccess', copiedCount) };
-                        showCopyModal.value = false;
-                        await loadProducts();
-                    } catch (error) {
-                        message.value = { type: 'error', text: t('importError', error.message) };
-                    } finally {
-                        isCopying.value = false;
-                    }
-                };
+                    const query = allProductsSearchQuery.value.toLowerCase();
+                    return allProducts.value.filter(product => 
+                        (product.name && product.name.toLowerCase().includes(query)) || 
+                        (product.cname && product.cname.toLowerCase().includes(query)) ||
+                        (product.id && product.id.toLowerCase().includes(query))
+                    );
+                });
                 
                 // Initialize
                 onMounted(() => {
-                    productId.value = generateProductId()
                     // Check authentication first
                     onAuthStateChanged(auth, (user) => {
                         checkAuthStatus(user);
@@ -900,18 +667,20 @@
                     }
                 });
                 
-                // Load outlets and products once authentication is confirmed
+                // Load outlets and all products once authentication is confirmed
                 watch(isAuthenticated, async (isAuthed) => {
                     if (isAuthed) {
                         await loadOutlets();
+                        await loadAllProducts();
                     }
                 });
                 
                 // Watch for outlet changes
                 watch(selectedOutlet, async () => {
                     if (selectedOutlet.value) {
-                        resetForm();
-                        await loadProducts();
+                        await loadOutletProducts();
+                    } else {
+                        outletProducts.value = [];
                     }
                 });
                 
@@ -931,39 +700,23 @@
                     isLoadingOutlets,
                     outletMessage,
                     selectedOutlet,
-                    productId,
-                    productName,
-                    productChineseName,
-                    productPrice,
-                    productUnit,
-                    productUOM,
-                    imageFile,
-                    imagePreview,
-                    isLoading,
-                    isSubmitting,
-                    message,
-                    isEditing,
-                    products,
-                    searchQuery,
-                    filteredProducts,
-                    unitOptions,
-                    extractChinesePart,
-                    extractEnglishPart,
+                    outletProducts,
+                    allProducts,
+                    isLoadingOutletProducts,
+                    isLoadingAllProducts,
+                    outletSearchQuery,
+                    allProductsSearchQuery,
+                    filteredOutletProducts,
+                    filteredAllProducts,
                     getUnitDisplay,
-                    handleImageSelected,
-                    resetForm,
-                    loadProducts,
-                    editProduct,
-                    deleteProduct,
-                    submitForm,
+                    isProductInOutlet,
+                    addToOutlet,
+                    removeFromOutlet,
                     isAuthenticated,
                     isCheckingAuth,
                     userEmail,
                     goBack,
-                    showCopyModal,
-                    sourceOutlet,
-                    isCopying,
-                    copyProducts
+                    message
                 };
             }
         }).mount('#app');
