@@ -514,47 +514,36 @@
                     return unit;
                 };
                 
-                // Load outlet products (products that are referenced in this outlet)
+                // Load outlet products by resolving productId references to global products
                 const loadOutletProducts = async () => {
                     if (!selectedOutlet.value) {
                         outletProducts.value = [];
                         return;
                     }
-                    
                     isLoadingOutletProducts.value = true;
-                    
                     try {
-                        // Get the outlet's product references
-                        const outletRef = doc(db, 'outlets', selectedOutlet.value);
-                        const outletDoc = await getDoc(outletRef);
-                        
-                        if (!outletDoc.exists()) {
+                        // Get all product reference docs in the outlet's products subcollection
+                        const productsRef = collection(db, `outlets/${selectedOutlet.value}/products`);
+                        const snapshot = await getDocs(productsRef);
+                        if (snapshot.empty) {
                             outletProducts.value = [];
                             return;
                         }
-                        
-                        const outletData = outletDoc.data();
-                        const productIds = outletData.products || [];
-                        
-                        if (productIds.length === 0) {
-                            outletProducts.value = [];
-                            return;
-                        }
-                        
-                        // Get the actual product data for each referenced product
+                        // For each doc, fetch the global product by productId
                         const outletProductsList = [];
-                        for (const productId of productIds) {
-                            const productRef = doc(db, 'products', productId);
-                            const productDoc = await getDoc(productRef);
-                            
-                            if (productDoc.exists()) {
+                        for (const docSnap of snapshot.docs) {
+                            const refData = docSnap.data();
+                            if (!refData.productId) continue;
+                            const globalRef = doc(db, 'products', refData.productId);
+                            const globalDoc = await getDoc(globalRef);
+                            if (globalDoc.exists()) {
                                 outletProductsList.push({
-                                    id: productDoc.id,
-                                    ...productDoc.data()
+                                    id: globalDoc.id,
+                                    ...globalDoc.data(),
+                                    _outletDocId: docSnap.id // for removal
                                 });
                             }
                         }
-                        
                         outletProducts.value = outletProductsList;
                     } catch (error) {
                         console.error('Error loading outlet products:', error);
@@ -615,25 +604,11 @@
                     message.value = { type: '', text: '' };
                     
                     try {
-                        // Get current outlet data
-                        const outletRef = doc(db, 'outlets', selectedOutlet.value);
-                        const outletDoc = await getDoc(outletRef);
-                        
-                        if (!outletDoc.exists()) {
-                            message.value = { type: 'error', text: t('outletNotFound') };
-                            return;
-                        }
-                        
-                        const outletData = outletDoc.data();
-                        const currentProducts = outletData.products || [];
-                        
-                        // Add the product ID to the outlet's products array
-                        const updatedProducts = [...currentProducts, product.id];
-                        
-                        // Update the outlet document
-                        await updateDoc(outletRef, {
-                            products: updatedProducts,
-                            updatedAt: serverTimestamp()
+                        // Add product to the outlet's products subcollection
+                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
+                        await setDoc(productRef, {
+                            ...product,
+                            addedAt: serverTimestamp()
                         });
                         
                         message.value = { type: 'success', text: t('addSuccess', product.name) };
@@ -643,36 +618,16 @@
                     }
                 };
                 
-                // Remove product from outlet
+                // Remove product from outlet using _outletDocId
                 const removeFromOutlet = async (product) => {
                     if (!confirm(t('removeConfirm', product.name))) {
                         return;
                     }
-                    
                     message.value = { type: '', text: '' };
-                    
                     try {
-                        // Get current outlet data
-                        const outletRef = doc(db, 'outlets', selectedOutlet.value);
-                        const outletDoc = await getDoc(outletRef);
-                        
-                        if (!outletDoc.exists()) {
-                            message.value = { type: 'error', text: t('outletNotFound') };
-                            return;
-                        }
-                        
-                        const outletData = outletDoc.data();
-                        const currentProducts = outletData.products || [];
-                        
-                        // Remove the product ID from the outlet's products array
-                        const updatedProducts = currentProducts.filter(id => id !== product.id);
-                        
-                        // Update the outlet document
-                        await updateDoc(outletRef, {
-                            products: updatedProducts,
-                            updatedAt: serverTimestamp()
-                        });
-                        
+                        // Remove product from the outlet's products subcollection using _outletDocId
+                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product._outletDocId);
+                        await deleteDoc(productRef);
                         message.value = { type: 'success', text: t('removeSuccess', product.name) };
                         await loadOutletProducts();
                     } catch (error) {
