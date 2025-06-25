@@ -227,6 +227,11 @@
                         </div>
                     </div>
                     
+                    <div v-else-if="selectedSourceOutlet && isLoadingSourceOutletProducts" class="loading-source">
+                        <div class="loading-spinner"></div>
+                        <p>{{ t('loadingSourceProducts') }}</p>
+                    </div>
+                    
                     <div v-else-if="selectedSourceOutlet && sourceOutletProducts.length === 0" class="empty-source">
                         {{ t('noProductsInSourceOutlet') }}
                     </div>
@@ -514,6 +519,10 @@
                     sourceOutletLoadError: {
                         zh: '加载源门店产品失败: {0}',
                         en: 'Failed to load source outlet products: {0}'
+                    },
+                    loadingSourceProducts: {
+                        zh: '加载源门店产品中...',
+                        en: 'Loading source outlet products...'
                     }
                 };
                 
