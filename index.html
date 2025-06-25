@@ -277,6 +277,26 @@
             margin-bottom: 15px;
         }
         
+        /* Section Headers */
+        .section-header {
+            grid-column: 1 / -1;
+            margin: 30px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1a3c6e;
+        }
+        
+        .section-header h2 {
+            color: #1a3c6e;
+            font-size: 1.5rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-header:first-child {
+            margin-top: 0;
+        }
+        
         /* Loading animation */
         .loading {
             display: inline-block;
@@ -504,34 +524,10 @@
                 </div>
                 
                 <div class="menu-grid">
-                    <!-- Order Management -->
-                    <a href="#" class="menu-item" @click.prevent="goToPage('orders')">
-                        <div class="menu-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
-                                <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/>
-                            </svg>
-                        </div>
-                        <div class="menu-content">
-                            <h3 class="menu-title">{{ t('orderManagement') }}</h3>
-                            <p class="menu-description">{{ t('orderManagementDesc') }}</p>
-                            <span class="btn btn-primary">{{ t('enter') }}</span>
-                        </div>
-                    </a>
-                    
-                    <!-- Product Management -->
-                    <a href="#" class="menu-item" @click.prevent="goToPage('products')">
-                        <div class="menu-icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
-                            </svg>
-                        </div>
-                        <div class="menu-content">
-                            <h3 class="menu-title">{{ t('productManagement') }}</h3>
-                            <p class="menu-description">{{ t('productManagementDesc') }}</p>
-                            <span class="btn btn-primary">{{ t('enter') }}</span>
-                        </div>
-                    </a>
+                    <!-- Outlet Details Section -->
+                    <div class="section-header">
+                        <h2>{{ t('outletDetails') }} <span class="english-subtext" v-if="currentLang === 'zh'">Outlet Details</span></h2>
+                    </div>
                     
                     <!-- Outlet Management -->
                     <a href="#" class="menu-item" @click.prevent="goToPage('outlets')">
@@ -544,6 +540,55 @@
                         <div class="menu-content">
                             <h3 class="menu-title">{{ t('outletManagement') }}</h3>
                             <p class="menu-description">{{ t('outletManagementDesc') }}</p>
+                            <span class="btn btn-primary">{{ t('enter') }}</span>
+                        </div>
+                    </a>
+                    
+                    <!-- Inventory Management -->
+                    <a href="#" class="menu-item" @click.prevent="goToPage('inventory')">
+                        <div class="menu-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-content">
+                            <h3 class="menu-title">{{ t('inventoryManagement') }}</h3>
+                            <p class="menu-description">{{ t('inventoryManagementDesc') }}</p>
+                            <span class="btn btn-primary">{{ t('enter') }}</span>
+                        </div>
+                    </a>
+
+                    <!-- Product Management -->
+                    <a href="#" class="menu-item" @click.prevent="goToPage('products')">
+                        <div class="menu-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+                                <path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-content">
+                            <h3 class="menu-title">{{ t('productManagement') }}</h3>
+                            <p class="menu-description">{{ t('productManagementDesc') }}</p>
+                            <span class="btn btn-primary">{{ t('enter') }}</span>
+                        </div>
+                    </a>
+
+                    <!-- Documents Section -->
+                    <div class="section-header">
+                        <h2>{{ t('documents') }} <span class="english-subtext" v-if="currentLang === 'zh'">Documents</span></h2>
+                    </div>
+                    
+                    <!-- Order Management -->
+                    <a href="#" class="menu-item" @click.prevent="goToPage('orders')">
+                        <div class="menu-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
+                                <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-content">
+                            <h3 class="menu-title">{{ t('orderManagement') }}</h3>
+                            <p class="menu-description">{{ t('orderManagementDesc') }}</p>
                             <span class="btn btn-primary">{{ t('enter') }}</span>
                         </div>
                     </a>
@@ -676,6 +721,22 @@
                     logout: {
                         zh: '退出登录',
                         en: 'Logout'
+                    },
+                    inventoryManagement: {
+                        zh: '库存管理',
+                        en: 'Inventory Management'
+                    },
+                    inventoryManagementDesc: {
+                        zh: '管理库存',
+                        en: 'Manage inventory'
+                    },
+                    outletDetails: {
+                        zh: '门店详情',
+                        en: 'Outlet Details'
+                    },
+                    documents: {
+                        zh: '文档',
+                        en: 'Documents'
                     }
                 };
                 
@@ -730,6 +791,8 @@
                 const goToPage = (page) => {
                     // Handle navigation based on the selected module
                     if (page === 'products') {
+                        window.location.href = 'product.html';
+                    } else if (page === 'inventory') {
                         window.location.href = 'inventory.html';
                     } else if (page === 'orders') {
                         window.location.href = 'order_management.html';
