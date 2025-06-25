@@ -74,13 +74,19 @@
                         
                         <!-- Outlet dropdown -->
                         <div v-else>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                v-model="outletFilter" 
+                                :placeholder="t('filterOutlets')"
+                                style="margin-bottom: 10px;">
                             <select 
                                 id="outlet" 
                                 class="form-control" 
                                 v-model="selectedOutlet" 
-                                :disabled="outlets.length === 0 || isLoadingOutlets">
+                                :disabled="filteredOutlets.length === 0 || isLoadingOutlets">
                                 <option value="">{{ t('selectOutletPlaceholder') }}</option>
-                                <option v-for="outlet in outlets" :key="outlet.id" :value="outlet.id">
+                                <option v-for="outlet in filteredOutlets" :key="outlet.id" :value="outlet.id">
                                     {{ outlet.name }}
                                 </option>
                             </select>
@@ -135,17 +141,17 @@
                     </div>
                 </div>
                 
-                <!-- All Products Section -->
-                <h2>{{ t('allProducts') }} <span class="english-subtext" v-if="currentLang === 'zh'">All Products</span></h2>
+                <!-- Available Products Section -->
+                <h2>{{ t('availableProducts') }} <span class="english-subtext" v-if="currentLang === 'zh'">Available Products</span></h2>
                 <div class="card">
                     <div class="search-container">
-                        <input type="text" class="search-input" v-model="allProductsSearchQuery" :placeholder="t('searchAllProducts')">
+                        <input type="text" class="search-input" v-model="allProductsSearchQuery" :placeholder="t('searchAvailableProducts')">
                     </div>
                     
-                    <div v-if="isLoadingAllProducts" class="loading">{{ t('loadingAllProducts') }}</div>
+                    <div v-if="isLoadingAllProducts" class="loading">{{ t('loadingAvailableProducts') }}</div>
                     
-                    <div v-else-if="allProducts.length === 0" class="empty-state">
-                        {{ t('noAllProductsFound') }}
+                    <div v-else-if="filteredAllProducts.length === 0" class="empty-state">
+                        {{ t('noAvailableProductsFound') }}
                     </div>
                     
                     <table v-else class="product-table">
@@ -175,8 +181,8 @@
                                         <button 
                                             class="btn btn-primary" 
                                             @click="addToOutlet(product)"
-                                            :disabled="!selectedOutlet || isProductInOutlet(product.id)">
-                                            {{ isProductInOutlet(product.id) ? t('alreadyAdded') : t('addToOutlet') }}
+                                            :disabled="!selectedOutlet">
+                                            {{ t('addToOutlet') }}
                                         </button>
                                     </div>
                                 </td>
@@ -281,28 +287,32 @@
                         zh: '所有产品',
                         en: 'All Products'
                     },
+                    availableProducts: {
+                        zh: '可用产品',
+                        en: 'Available Products'
+                    },
                     searchOutletProducts: {
                         zh: '搜索门店产品...',
                         en: 'Search outlet products...'
                     },
-                    searchAllProducts: {
-                        zh: '搜索所有产品...',
-                        en: 'Search all products...'
+                    searchAvailableProducts: {
+                        zh: '搜索可用产品...',
+                        en: 'Search available products...'
                     },
                     loadingOutletProducts: {
                         zh: '加载门店产品中...',
                         en: 'Loading outlet products...'
                     },
-                    loadingAllProducts: {
-                        zh: '加载所有产品中...',
-                        en: 'Loading all products...'
+                    loadingAvailableProducts: {
+                        zh: '加载可用产品中...',
+                        en: 'Loading available products...'
                     },
                     noOutletProductsFound: {
                         zh: '此门店暂无产品。',
                         en: 'No products found in this outlet.'
                     },
-                    noAllProductsFound: {
-                        zh: '未找到产品。',
+                    noAvailableProductsFound: {
+                        zh: '未找到可用产品。',
                         en: 'No products found.'
                     },
                     image: {
@@ -373,6 +383,10 @@
                         zh: '加载门店失败: {0}',
                         en: 'Failed to load outlets: {0}'
                     },
+                    outletNotFound: {
+                        zh: '门店未找到',
+                        en: 'Outlet not found'
+                    },
                     // Authentication translations
                     checkingAuth: {
                         zh: '验证身份中...',
@@ -389,6 +403,10 @@
                     back: {
                         zh: '返回',
                         en: 'Back'
+                    },
+                    filterOutlets: {
+                        zh: '过滤门店',
+                        en: 'Filter outlets'
                     }
                 };
                 
@@ -410,6 +428,7 @@
                 
                 // Form data
                 const selectedOutlet = ref('');
+                const outletFilter = ref('');
                 
                 // UI states
                 const message = ref({ type: '', text: '' });
@@ -495,7 +514,7 @@
                     return unit;
                 };
                 
-                // Load outlet products
+                // Load outlet products (products that are referenced in this outlet)
                 const loadOutletProducts = async () => {
                     if (!selectedOutlet.value) {
                         outletProducts.value = [];
@@ -505,20 +524,38 @@
                     isLoadingOutletProducts.value = true;
                     
                     try {
-                        const productsRef = collection(db, `outlets/${selectedOutlet.value}/products`);
-                        const snapshot = await getDocs(productsRef);
+                        // Get the outlet's product references
+                        const outletRef = doc(db, 'outlets', selectedOutlet.value);
+                        const outletDoc = await getDoc(outletRef);
                         
-                        if (snapshot.empty) {
+                        if (!outletDoc.exists()) {
                             outletProducts.value = [];
                             return;
                         }
                         
-                        outletProducts.value = snapshot.docs.map(doc => {
-                            return {
-                                id: doc.id,
-                                ...doc.data()
-                            };
-                        });
+                        const outletData = outletDoc.data();
+                        const productIds = outletData.products || [];
+                        
+                        if (productIds.length === 0) {
+                            outletProducts.value = [];
+                            return;
+                        }
+                        
+                        // Get the actual product data for each referenced product
+                        const outletProductsList = [];
+                        for (const productId of productIds) {
+                            const productRef = doc(db, 'products', productId);
+                            const productDoc = await getDoc(productRef);
+                            
+                            if (productDoc.exists()) {
+                                outletProductsList.push({
+                                    id: productDoc.id,
+                                    ...productDoc.data()
+                                });
+                            }
+                        }
+                        
+                        outletProducts.value = outletProductsList;
                     } catch (error) {
                         console.error('Error loading outlet products:', error);
                         message.value = { type: 'error', text: error.message };
@@ -527,37 +564,26 @@
                     }
                 };
                 
-                // Load all products from all outlets
+                // Load all products from global products collection
                 const loadAllProducts = async () => {
                     isLoadingAllProducts.value = true;
                     
                     try {
-                        const allProductsSet = new Map(); // Use Map to avoid duplicates
+                        // Load from global products collection (like inventory.html)
+                        const productsRef = collection(db, 'products');
+                        const snapshot = await getDocs(productsRef);
                         
-                        // Get all outlets
-                        const outletsRef = collection(db, 'outlets');
-                        const outletsSnapshot = await getDocs(outletsRef);
-                        
-                        // For each outlet, get its products
-                        for (const outletDoc of outletsSnapshot.docs) {
-                            const outletId = outletDoc.id;
-                            const productsRef = collection(db, `outlets/${outletId}/products`);
-                            const productsSnapshot = await getDocs(productsRef);
-                            
-                            // Add products to the set (using product ID as key to avoid duplicates)
-                            productsSnapshot.docs.forEach(doc => {
-                                const productData = doc.data();
-                                if (!allProductsSet.has(doc.id)) {
-                                    allProductsSet.set(doc.id, {
-                                        id: doc.id,
-                                        ...productData
-                                    });
-                                }
-                            });
+                        if (snapshot.empty) {
+                            allProducts.value = [];
+                            return;
                         }
                         
-                        // Convert Map to array
-                        allProducts.value = Array.from(allProductsSet.values());
+                        allProducts.value = snapshot.docs.map(doc => {
+                            return {
+                                id: doc.id,
+                                ...doc.data()
+                            };
+                        });
                         
                         // Sort by name
                         allProducts.value.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -589,10 +615,25 @@
                     message.value = { type: '', text: '' };
                     
                     try {
-                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
-                        await setDoc(productRef, {
-                            ...product,
-                            addedAt: serverTimestamp()
+                        // Get current outlet data
+                        const outletRef = doc(db, 'outlets', selectedOutlet.value);
+                        const outletDoc = await getDoc(outletRef);
+                        
+                        if (!outletDoc.exists()) {
+                            message.value = { type: 'error', text: t('outletNotFound') };
+                            return;
+                        }
+                        
+                        const outletData = outletDoc.data();
+                        const currentProducts = outletData.products || [];
+                        
+                        // Add the product ID to the outlet's products array
+                        const updatedProducts = [...currentProducts, product.id];
+                        
+                        // Update the outlet document
+                        await updateDoc(outletRef, {
+                            products: updatedProducts,
+                            updatedAt: serverTimestamp()
                         });
                         
                         message.value = { type: 'success', text: t('addSuccess', product.name) };
@@ -611,8 +652,26 @@
                     message.value = { type: '', text: '' };
                     
                     try {
-                        const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
-                        await deleteDoc(productRef);
+                        // Get current outlet data
+                        const outletRef = doc(db, 'outlets', selectedOutlet.value);
+                        const outletDoc = await getDoc(outletRef);
+                        
+                        if (!outletDoc.exists()) {
+                            message.value = { type: 'error', text: t('outletNotFound') };
+                            return;
+                        }
+                        
+                        const outletData = outletDoc.data();
+                        const currentProducts = outletData.products || [];
+                        
+                        // Remove the product ID from the outlet's products array
+                        const updatedProducts = currentProducts.filter(id => id !== product.id);
+                        
+                        // Update the outlet document
+                        await updateDoc(outletRef, {
+                            products: updatedProducts,
+                            updatedAt: serverTimestamp()
+                        });
                         
                         message.value = { type: 'success', text: t('removeSuccess', product.name) };
                         await loadOutletProducts();
@@ -635,14 +694,23 @@
                     );
                 });
                 
-                // Filter all products
+                // Filter all products (exclude those already in the outlet)
                 const filteredAllProducts = computed(() => {
+                    let products = allProducts.value;
+                    
+                    // Filter out products that are already in the selected outlet
+                    if (selectedOutlet.value && outletProducts.value.length > 0) {
+                        const outletProductIds = outletProducts.value.map(p => p.id);
+                        products = products.filter(product => !outletProductIds.includes(product.id));
+                    }
+                    
+                    // Apply search filter
                     if (!allProductsSearchQuery.value) {
-                        return allProducts.value;
+                        return products;
                     }
                     
                     const query = allProductsSearchQuery.value.toLowerCase();
-                    return allProducts.value.filter(product => 
+                    return products.filter(product => 
                         (product.name && product.name.toLowerCase().includes(query)) || 
                         (product.cname && product.cname.toLowerCase().includes(query)) ||
                         (product.id && product.id.toLowerCase().includes(query))
@@ -691,6 +759,18 @@
                     localStorage.setItem('preferred_language', currentLang.value);
                 };
                 
+                // Filter outlets
+                const filteredOutlets = computed(() => {
+                    if (!outletFilter.value) {
+                        return outlets.value;
+                    }
+                    
+                    const query = outletFilter.value.toLowerCase();
+                    return outlets.value.filter(outlet => 
+                        outlet.name.toLowerCase().includes(query)
+                    );
+                });
+                
                 return {
                     currentLang,
                     languages,
@@ -716,7 +796,9 @@
                     isCheckingAuth,
                     userEmail,
                     goBack,
-                    message
+                    message,
+                    outletFilter,
+                    filteredOutlets
                 };
             }
         }).mount('#app');
