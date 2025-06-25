@@ -134,7 +134,7 @@
                             <tbody>
                                 <tr v-for="product in filteredOutletProducts" :key="product.id">
                                     <td>
-                                        <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">
+                                        <img :src="product.imageData || product.image || '/logo.png'" :alt="product.name" class="table-image">
                                     </td>
                                     <td>{{ product.name }}</td>
                                     <td>{{ product.cname }}</td>
@@ -180,7 +180,7 @@
                         <tbody>
                             <tr v-for="product in filteredAllProducts" :key="product.id">
                                 <td>
-                                    <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">
+                                    <img :src="product.imageData || product.image || '/logo.png'" :alt="product.name" class="table-image">
                                 </td>
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.cname }}</td>
