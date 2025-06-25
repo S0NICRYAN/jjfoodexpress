@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>产品管理系统 - SHIAWASE (S) PTE LTD</title>
     <link rel="stylesheet" href="product.css">
+    <!-- Inline styles for product.html only -->
+    <style>
+      #app .search-container {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      #app .search-container .search-input {
+        width: 100%;
+        margin-bottom: 0;
+      }
+      #app .search-container .import-btn {
+        margin-left: 0;
+        margin-top: 16px;
+        align-self: flex-start;
+      }
+    </style>
     <!-- Vue 3 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
 </head>
@@ -87,7 +104,7 @@
                     <div class="card">
                         <div class="search-container">
                             <input type="text" class="search-input" v-model="outletSearchQuery" :placeholder="t('searchOutletProducts')">
-                            <button style="margin-top: 10px;"class="btn btn-secondary import-btn" @click="showImportModal = true" :disabled="!selectedOutlet">
+                            <button class="btn btn-secondary import-btn" @click="showImportModal = true" :disabled="!selectedOutlet">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                                     <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                                     <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
@@ -117,7 +134,7 @@
                             <tbody>
                                 <tr v-for="product in filteredOutletProducts" :key="product.id">
                                     <td>
-                                        <img :src="product.imageData || product.image || '/logo.png'" :alt="product.name" class="table-image">
+                                        <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">
                                     </td>
                                     <td>{{ product.name }}</td>
                                     <td>{{ product.cname }}</td>
@@ -163,7 +180,7 @@
                         <tbody>
                             <tr v-for="product in filteredAllProducts" :key="product.id">
                                 <td>
-                                    <img :src="product.imageData || product.image || '/logo.png'" :alt="product.name" class="table-image">
+                                    <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">
                                 </td>
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.cname }}</td>
