@@ -25,7 +25,7 @@ export default defineConfig({
         outlet_management: 'outlet_management.html',
         order_management:'order_management.html',
         soa:'soa.html',
-        incase:'incase.html'
+        product:'product.html'
       }
     }
   }
