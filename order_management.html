@@ -220,11 +220,21 @@
                                 :placeholder="t('searchOrders')">
                         </div>
                         <div class="filter-group">
-                            <label for="outletFilter">{{ t('filterByOutlet') }}</label>
-                            <select id="outletFilter" class="form-control" v-model="outletFilter">
-                                <option value="all">{{ t('allOutlets') }}</option>
-                                <option v-for="prefix in availableOutletPrefixes" :key="prefix" :value="prefix">
+                            <label for="outletPrefix">{{ t('selectOutletPrefix') }}</label>
+                            <select id="outletPrefix" class="form-control" v-model="selectedPrefix">
+                                <option value="">{{ t('selectPrefixPlaceholder') }}</option>
+                                <option v-for="prefix in outletPrefixes" :key="prefix" :value="prefix">
                                     {{ prefix }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="outletFilter">{{ t('selectOutlet') }}</label>
+                            <select id="outletFilter" class="form-control" v-model="selectedOutlet" 
+                                :disabled="filteredOutletsByPrefix.length === 0">
+                                <option value="">{{ t('selectOutletPlaceholder') }}</option>
+                                <option v-for="outlet in filteredOutletsByPrefix" :key="outlet.id" :value="outlet.id">
+                                    {{ outlet.name }}
                                 </option>
                             </select>
                         </div>
@@ -541,7 +551,11 @@
                     notAuthorized: { zh: '未授权访问', en: 'Not Authorized' },
                     redirectingToLogin: { zh: '您无权访问此页面。正在重定向到首页...', en: 'You are not authorized to access this page. Redirecting to home...' },
                     cancelOrder: { zh: '取消订单', en: 'Cancel Order' },
-                    undoCancellation: { zh: '撤销取消', en: 'Undo Cancellation' }
+                    undoCancellation: { zh: '撤销取消', en: 'Undo Cancellation' },
+                    selectOutletPrefix: { zh: '选择门店前缀', en: 'Select Outlet Prefix' },
+                    selectPrefixPlaceholder: { zh: '请选择前缀', en: 'Please select a prefix' },
+                    selectOutlet: { zh: '选择门店', en: 'Select Outlet' },
+                    selectOutletPlaceholder: { zh: '请选择门店', en: 'Please select an outlet' }
                 };
                             
                 // Function to get translation
@@ -559,7 +573,6 @@
                 const orders = ref([]);
                 const isLoading = ref(false);
                 const searchQuery = ref('');
-                const outletFilter = ref('all');
                 const startDate = ref('');
                 const endDate = ref('');
                 const showModal = ref(false);
@@ -567,16 +580,25 @@
                 const updatingStatus = ref(false);
                 const message = ref({ type: '', text: '' });
                 
-                // Get unique outlet prefixes
-                const availableOutletPrefixes = computed(() => {
-                    const prefixes = new Set();
-                    orders.value.forEach(order => {
-                        if (order.outletId) {
-                            const prefix = order.outletId.split('-')[0];
-                            if (prefix) prefixes.add(prefix);
-                        }
+                // Outlet filtering data
+                const outlets = ref([]);
+                const selectedPrefix = ref('');
+                const selectedOutlet = ref('');
+                
+                // Compute all unique prefixes
+                const outletPrefixes = computed(() => {
+                    const set = new Set();
+                    outlets.value.forEach(outlet => {
+                        const dashIdx = outlet.id.indexOf('-');
+                        if (dashIdx > 0) set.add(outlet.id.substring(0, dashIdx));
                     });
-                    return Array.from(prefixes).sort();
+                    return Array.from(set).sort();
+                });
+                
+                // Filter outlets by selected prefix
+                const filteredOutletsByPrefix = computed(() => {
+                    if (!selectedPrefix.value) return [];
+                    return outlets.value.filter(outlet => outlet.id.startsWith(selectedPrefix.value + '-'));
                 });
                 
                 // Filter orders
@@ -594,9 +616,16 @@
                     }
                     
                     // Outlet prefix filter
-                    if (outletFilter.value !== 'all') {
+                    if (selectedPrefix.value) {
                         filtered = filtered.filter(order => 
-                            order.outletId?.startsWith(outletFilter.value + '-')
+                            order.outletId?.startsWith(selectedPrefix.value + '-')
+                        );
+                    }
+                    
+                    // Specific outlet filter
+                    if (selectedOutlet.value) {
+                        filtered = filtered.filter(order => 
+                            order.outletId === selectedOutlet.value
                         );
                     }
                     
@@ -709,6 +738,31 @@
                         console.error('Error loading orders:', error);
                     } finally {
                         isLoading.value = false;
+                    }
+                };
+                
+                // Load outlets from Firestore
+                const loadOutlets = async () => {
+                    try {
+                        const outletsRef = collection(db, 'outlets');
+                        const snapshot = await getDocs(outletsRef);
+                        
+                        if (snapshot.empty) {
+                            outlets.value = [];
+                            return;
+                        }
+                        
+                        outlets.value = snapshot.docs.map(doc => {
+                            return {
+                                id: doc.id,
+                                name: doc.data().name || doc.id // Use data.name if available, otherwise use doc.id
+                            };
+                        });
+                        
+                        // Sort outlets by name for better UX
+                        outlets.value.sort((a, b) => a.name.localeCompare(b.name));
+                    } catch (error) {
+                        console.error('Error loading outlets:', error);
                     }
                 };
                 
@@ -1039,6 +1093,7 @@
                 watch(isAuthenticated, async (isAuthed) => {
                     if (isAuthed) {
                         await loadOrders();
+                        await loadOutlets();
                     }
                 });
                 
@@ -1061,10 +1116,12 @@
                     orders,
                     isLoading,
                     searchQuery,
-                    outletFilter,
                     startDate,
                     endDate,
-                    availableOutletPrefixes,
+                    outletPrefixes,
+                    filteredOutletsByPrefix,
+                    selectedPrefix,
+                    selectedOutlet,
                     filteredOrders,
                     showModal,
                     selectedOrder,
