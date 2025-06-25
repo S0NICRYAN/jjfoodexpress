@@ -87,6 +87,13 @@
                     <div class="card">
                         <div class="search-container">
                             <input type="text" class="search-input" v-model="outletSearchQuery" :placeholder="t('searchOutletProducts')">
+                            <button class="btn btn-secondary import-btn" @click="showImportModal = true" :disabled="!selectedOutlet">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                                </svg>
+                                {{ t('importFromOutlet') }}
+                            </button>
                         </div>
                         
                         <div v-if="isLoadingOutletProducts" class="loading">{{ t('loadingOutletProducts') }}</div>
@@ -110,7 +117,7 @@
                             <tbody>
                                 <tr v-for="product in filteredOutletProducts" :key="product.id">
                                     <td>
-                                        <img :src="product.imageData || product.image || '/logo.png'" :alt="product.name" class="table-image">
+                                        <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">
                                     </td>
                                     <td>{{ product.name }}</td>
                                     <td>{{ product.cname }}</td>
@@ -156,7 +163,7 @@
                         <tbody>
                             <tr v-for="product in filteredAllProducts" :key="product.id">
                                 <td>
-                                    <img :src="product.imageData || product.image || '/logo.png'" :alt="product.name" class="table-image">
+                                    <img :src="product.imageData || product.image || '/api/placeholder/60/60'" :alt="product.name" class="table-image">
                                 </td>
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.cname }}</td>
@@ -183,6 +190,64 @@
             <div v-else class="auth-error">
                 <h2>{{ t('notAuthorized') || 'Not Authorized' }}</h2>
                 <p>{{ t('redirectingToLogin') || 'You are not authorized to access this page. Redirecting to home...' }}</p>
+            </div>
+        </div>
+        
+        <!-- Import Modal -->
+        <div v-if="showImportModal" class="modal-overlay" @click="showImportModal = false">
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h3>{{ t('importFromOutlet') }}</h3>
+                    <button class="modal-close" @click="showImportModal = false">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="sourceOutlet">{{ t('selectSourceOutlet') }} <span class="english-subtext" v-if="currentLang === 'zh'">Select Source Outlet:</span></label>
+                        <select id="sourceOutlet" class="form-control" v-model="selectedSourceOutlet" :disabled="isLoadingSourceOutletProducts">
+                            <option value="">{{ t('selectSourceOutletPlaceholder') }}</option>
+                            <option v-for="outlet in availableSourceOutlets" :key="outlet.id" :value="outlet.id">
+                                {{ outlet.name }}
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div v-if="selectedSourceOutlet && sourceOutletProducts.length > 0" class="source-products-preview">
+                        <h4>{{ t('productsToImport') }} <span class="english-subtext" v-if="currentLang === 'zh'">Products to Import:</span></h4>
+                        <div class="source-products-list">
+                            <div v-for="product in productsToImport" :key="product.id" class="source-product-item">
+                                <img :src="product.imageData || product.image || '/api/placeholder/40/40'" :alt="product.name" class="source-product-image">
+                                <div class="source-product-info">
+                                    <div class="source-product-name">{{ product.name }}</div>
+                                    <div class="source-product-cname">{{ product.cname }}</div>
+                                </div>
+                                <div class="source-product-price">${{ product.price }}</div>
+                            </div>
+                        </div>
+                        <div class="import-summary">
+                            <p>{{ t('importSummary', productsToImport.length, sourceOutletProducts.length) }}</p>
+                        </div>
+                    </div>
+                    
+                    <div v-else-if="selectedSourceOutlet && sourceOutletProducts.length === 0" class="empty-source">
+                        {{ t('noProductsInSourceOutlet') }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @click="showImportModal = false">
+                        {{ t('cancel') }}
+                    </button>
+                    <button 
+                        class="btn btn-primary" 
+                        @click="importProducts"
+                        :disabled="!selectedSourceOutlet || productsToImport.length === 0 || isImporting">
+                        <span v-if="isImporting">{{ t('importing') }}</span>
+                        <span v-else>{{ t('importProducts') }}</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -402,6 +467,58 @@
                     selectPrefixPlaceholder: {
                         zh: '请选择前缀',
                         en: 'Please select a prefix'
+                    },
+                    importFromOutlet: {
+                        zh: '从其他门店导入',
+                        en: 'Import from Another Outlet'
+                    },
+                    selectSourceOutlet: {
+                        zh: '选择源门店',
+                        en: 'Select Source Outlet'
+                    },
+                    selectSourceOutletPlaceholder: {
+                        zh: '请选择源门店',
+                        en: 'Please select a source outlet'
+                    },
+                    productsToImport: {
+                        zh: '要导入的产品',
+                        en: 'Products to Import'
+                    },
+                    importSummary: {
+                        zh: '将导入 {0} 个产品，其中 {1} 个可用',
+                        en: 'Importing {0} products, {1} available'
+                    },
+                    cancel: {
+                        zh: '取消',
+                        en: 'Cancel'
+                    },
+                    importing: {
+                        zh: '正在导入',
+                        en: 'Importing'
+                    },
+                    importProducts: {
+                        zh: '导入产品',
+                        en: 'Import Products'
+                    },
+                    noProductsInSourceOutlet: {
+                        zh: '源门店暂无产品',
+                        en: 'No products found in the source outlet'
+                    },
+                    importSuccess: {
+                        zh: '成功导入 {0} 个产品，跳过 {1} 个产品',
+                        en: 'Successfully imported {0} products, skipped {1} products'
+                    },
+                    importFailed: {
+                        zh: '导入失败，跳过 {0} 个产品',
+                        en: 'Import failed, skipped {0} products'
+                    },
+                    importError: {
+                        zh: '导入失败: {0}',
+                        en: 'Import failed: {0}'
+                    },
+                    sourceOutletLoadError: {
+                        zh: '加载源门店产品失败: {0}',
+                        en: 'Failed to load source outlet products: {0}'
                     }
                 };
                 
@@ -726,6 +843,138 @@
                     localStorage.setItem('preferred_language', currentLang.value);
                 };
                 
+                // New state for import modal
+                const showImportModal = ref(false);
+                const selectedSourceOutlet = ref('');
+                const sourceOutletProducts = ref([]);
+                const isLoadingSourceOutletProducts = ref(false);
+                const isImporting = ref(false);
+                
+                // Computed property for available source outlets (exclude current outlet)
+                const availableSourceOutlets = computed(() => {
+                    return outlets.value.filter(outlet => outlet.id !== selectedOutlet.value);
+                });
+                
+                // Computed property for products to import (exclude already existing ones)
+                const productsToImport = computed(() => {
+                    if (!selectedSourceOutlet.value || sourceOutletProducts.value.length === 0) {
+                        return [];
+                    }
+                    
+                    const currentProductIds = outletProducts.value.map(p => p.id);
+                    return sourceOutletProducts.value.filter(product => 
+                        !currentProductIds.includes(product.id)
+                    );
+                });
+                
+                // Function to load source outlet products
+                const loadSourceOutletProducts = async () => {
+                    if (!selectedSourceOutlet.value) {
+                        sourceOutletProducts.value = [];
+                        return;
+                    }
+                    
+                    isLoadingSourceOutletProducts.value = true;
+                    try {
+                        // Get all product reference docs in the source outlet's products subcollection
+                        const productsRef = collection(db, `outlets/${selectedSourceOutlet.value}/products`);
+                        const snapshot = await getDocs(productsRef);
+                        
+                        if (snapshot.empty) {
+                            sourceOutletProducts.value = [];
+                            return;
+                        }
+                        
+                        // For each doc, fetch the global product by productId
+                        const sourceProductsList = [];
+                        for (const docSnap of snapshot.docs) {
+                            const refData = docSnap.data();
+                            if (!refData.productId) continue;
+                            
+                            const globalRef = doc(db, 'products', refData.productId);
+                            const globalDoc = await getDoc(globalRef);
+                            if (globalDoc.exists()) {
+                                sourceProductsList.push({
+                                    id: globalDoc.id,
+                                    ...globalDoc.data()
+                                });
+                            }
+                        }
+                        sourceOutletProducts.value = sourceProductsList;
+                    } catch (error) {
+                        console.error('Error loading source outlet products:', error);
+                        message.value = { type: 'error', text: t('sourceOutletLoadError', error.message) };
+                    } finally {
+                        isLoadingSourceOutletProducts.value = false;
+                    }
+                };
+                
+                // Function to import products from source outlet
+                const importProducts = async () => {
+                    if (!selectedSourceOutlet.value || productsToImport.value.length === 0) {
+                        return;
+                    }
+                    
+                    isImporting.value = true;
+                    message.value = { type: '', text: '' };
+                    
+                    try {
+                        let importedCount = 0;
+                        let skippedCount = 0;
+                        
+                        for (const product of productsToImport.value) {
+                            try {
+                                // Add product to the current outlet's products subcollection
+                                const productRef = doc(db, `outlets/${selectedOutlet.value}/products`, product.id);
+                                await setDoc(productRef, {
+                                    productId: product.id,
+                                    addedAt: serverTimestamp()
+                                });
+                                importedCount++;
+                            } catch (error) {
+                                console.error(`Error importing product ${product.id}:`, error);
+                                skippedCount++;
+                            }
+                        }
+                        
+                        // Show success message
+                        if (importedCount > 0) {
+                            message.value = { 
+                                type: 'success', 
+                                text: t('importSuccess', importedCount, skippedCount) 
+                            };
+                        } else {
+                            message.value = { 
+                                type: 'error', 
+                                text: t('importFailed', skippedCount) 
+                            };
+                        }
+                        
+                        // Reload current outlet products
+                        await loadOutletProducts();
+                        
+                        // Close modal
+                        showImportModal.value = false;
+                        selectedSourceOutlet.value = '';
+                        sourceOutletProducts.value = [];
+                        
+                    } catch (error) {
+                        console.error('Error during import:', error);
+                        message.value = { type: 'error', text: t('importError', error.message) };
+                    } finally {
+                        isImporting.value = false;
+                    }
+                };
+                
+                // Watch for source outlet changes
+                watch(selectedSourceOutlet, async () => {
+                    if (selectedSourceOutlet.value) {
+                        await loadSourceOutletProducts();
+                    } else {
+                        sourceOutletProducts.value = [];
+                    }
+                });
+                
                 return {
                     currentLang,
                     languages,
@@ -755,7 +1004,16 @@
                     outletFilter,
                     filteredOutletsByPrefix,
                     selectedPrefix,
-                    outletPrefixes
+                    outletPrefixes,
+                    showImportModal,
+                    selectedSourceOutlet,
+                    sourceOutletProducts,
+                    isLoadingSourceOutletProducts,
+                    isImporting,
+                    availableSourceOutlets,
+                    productsToImport,
+                    loadSourceOutletProducts,
+                    importProducts
                 };
             }
         }).mount('#app');
