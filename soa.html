@@ -357,6 +357,11 @@
             <div v-else-if="isAuthenticated" class="soa-container">
                 <h1>{{ t('statementOfAccount') || 'Statement of Account' }}</h1>
 
+                <div v-if="isLoadingOrders" class="auth-loading" style="margin-bottom: 20px;">
+                    <div class="loading-spinner"></div>
+                    <p>Loading orders...</p>
+                </div>
+
                 <div class="filters-section">
                     <div class="filter-row">
                         <div class="filter-group">
@@ -500,7 +505,8 @@
                             checkingAuth: '正在检查身份验证...'
                         }
                     },
-                    isLoadingOutlets: false
+                    isLoadingOutlets: false,
+                    isLoadingOrders: false
                 };
             },
             computed: {
@@ -566,29 +572,33 @@
                 },
                 async fetchOrders() {
                     if (!this.selectedMonth || !this.selectedOutlet) return;
+                    this.isLoadingOrders = true;
+                    try {
+                        const [year, month] = this.selectedMonth.split('-');
+                        const startDate = new Date(year, month - 1, 1);
+                        const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
-                    const [year, month] = this.selectedMonth.split('-');
-                    const startDate = new Date(year, month - 1, 1);
-                    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+                        const ordersRef = collection(db, 'orders');
+                        const q = query(
+                            ordersRef,
+                            where('outletId', '==', this.selectedOutlet)
+                        );
 
-                    const ordersRef = collection(db, 'orders');
-                    const q = query(
-                        ordersRef,
-                        where('outletId', '==', this.selectedOutlet)
-                    );
-
-                    const querySnapshot = await getDocs(q);
-                    this.orders = querySnapshot.docs
-                        .map(doc => ({ id: doc.id, ...doc.data() }))
-                        .filter(order => {
-                            if (!order.createdAt) return false;
-                            const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
-                            return (
-                                orderDate >= startDate &&
-                                orderDate <= endDate &&
-                                (order.status === 'processing' || order.status === 'delivered')
-                            );
-                        });
+                        const querySnapshot = await getDocs(q);
+                        this.orders = querySnapshot.docs
+                            .map(doc => ({ id: doc.id, ...doc.data() }))
+                            .filter(order => {
+                                if (!order.createdAt) return false;
+                                const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+                                return (
+                                    orderDate >= startDate &&
+                                    orderDate <= endDate &&
+                                    (order.status === 'processing' || order.status === 'delivered')
+                                );
+                            });
+                    } finally {
+                        this.isLoadingOrders = false;
+                    }
                 },
                 async fetchOutlets() {
                     this.isLoadingOutlets = true;
