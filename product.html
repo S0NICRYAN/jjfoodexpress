@@ -340,6 +340,10 @@
                         zh: '产品管理系统',
                         en: 'Product Management'
                     },
+                    removeConfirm:{
+                        zh:'确认产品移除',
+                        en:'Confirm Product Removal'
+                    },
                     selectOutlet: {
                         zh: '选择门店',
                         en: 'Select Outlet'
@@ -770,7 +774,7 @@
                 
                 // Remove product from outlet using _outletDocId
                 const removeFromOutlet = async (product) => {
-                    if (!confirm(t('Remove Product from Outlet?', product.name))) {
+                    if (!confirm(t('removeConfirm', product.name))) {
                         return;
                     }
                     message.value = { type: '', text: '' };
