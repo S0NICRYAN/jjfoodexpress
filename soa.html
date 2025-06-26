@@ -363,10 +363,17 @@
                             <input type="month" v-model="selectedMonth" @change="fetchOrders">
                         </div>
                         <div class="filter-group">
+                            <label>{{ t('selectOutletPrefix') || 'Select Outlet Prefix' }}</label>
+                            <select v-model="selectedPrefix">
+                                <option value="">{{ t('selectPrefixPlaceholder') }}</option>
+                                <option v-for="prefix in outletPrefixes" :key="prefix" :value="prefix">{{ prefix }}</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
                             <label>{{ t('selectOutlet') || 'Select Outlet' }}</label>
-                            <select v-model="selectedOutlet" @change="fetchOrders">
+                            <select v-model="selectedOutlet" @change="fetchOrders" :disabled="filteredOutletsByPrefix.length === 0">
                                 <option value="">{{ t('selectOutlet') || 'Select Outlet' }}</option>
-                                <option v-for="outlet in outlets" :key="outlet.id" :value="outlet.id">
+                                <option v-for="outlet in filteredOutletsByPrefix" :key="outlet.id" :value="outlet.id">
                                     {{ outlet.name }}
                                 </option>
                             </select>
@@ -452,6 +459,7 @@
                     currentLang: 'en',
                     selectedMonth: '',
                     selectedOutlet: '',
+                    selectedPrefix: '',
                     outlets: [],
                     orders: [],
                     error: null,
@@ -460,6 +468,8 @@
                             statementOfAccount: 'Statement of Account',
                             selectMonth: 'Select Month',
                             selectOutlet: 'Select Outlet',
+                            selectOutletPrefix: 'Select Outlet Prefix',
+                            selectPrefixPlaceholder: 'Please select a prefix',
                             totalDays: 'Total Days',
                             totalOrders: 'Total Orders',
                             totalItems: 'Total Items',
@@ -475,6 +485,8 @@
                             statementOfAccount: '对账单',
                             selectMonth: '选择月份',
                             selectOutlet: '选择门店',
+                            selectOutletPrefix: '选择门店前缀',
+                            selectPrefixPlaceholder: '请选择前缀',
                             totalDays: '总天数',
                             totalOrders: '总订单数',
                             totalItems: '总商品数',
@@ -492,6 +504,19 @@
             computed: {
                 totalAmount() {
                     return this.orders.reduce((sum, order) => sum + (order.grandTotal || 0), 0);
+                },
+                outletPrefixes() {
+                    // Get unique prefixes from outlet IDs (before '-')
+                    const set = new Set();
+                    this.outlets.forEach(outlet => {
+                        const dashIdx = outlet.id.indexOf('-');
+                        if (dashIdx > 0) set.add(outlet.id.substring(0, dashIdx));
+                    });
+                    return Array.from(set).sort();
+                },
+                filteredOutletsByPrefix() {
+                    if (!this.selectedPrefix) return [];
+                    return this.outlets.filter(outlet => outlet.id.startsWith(this.selectedPrefix + '-'));
                 },
                 dailySummaries() {
                     const summaries = {};
