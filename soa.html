@@ -360,24 +360,28 @@
                     <div class="filter-row">
                         <div class="filter-group">
                             <label>{{ t('selectMonth') || 'Select Month' }}</label>
-                            <input type="month" v-model="selectedMonth" @change="fetchOrders">
+                            <input type="month" v-model="selectedMonth" @change="fetchOrders" :disabled="isLoadingOutlets">
                         </div>
                         <div class="filter-group">
                             <label>{{ t('selectOutletPrefix') || 'Select Outlet Prefix' }}</label>
-                            <select v-model="selectedPrefix">
+                            <select v-model="selectedPrefix" :disabled="isLoadingOutlets">
                                 <option value="">{{ t('selectPrefixPlaceholder') }}</option>
                                 <option v-for="prefix in outletPrefixes" :key="prefix" :value="prefix">{{ prefix }}</option>
                             </select>
                         </div>
                         <div class="filter-group">
                             <label>{{ t('selectOutlet') || 'Select Outlet' }}</label>
-                            <select v-model="selectedOutlet" @change="fetchOrders" :disabled="filteredOutletsByPrefix.length === 0">
+                            <select v-model="selectedOutlet" @change="fetchOrders" :disabled="filteredOutletsByPrefix.length === 0 || isLoadingOutlets">
                                 <option value="">{{ t('selectOutlet') || 'Select Outlet' }}</option>
                                 <option v-for="outlet in filteredOutletsByPrefix" :key="outlet.id" :value="outlet.id">
                                     {{ outlet.name }}
                                 </option>
                             </select>
                         </div>
+                    </div>
+                    <div v-if="isLoadingOutlets" class="auth-loading" style="margin-top: 10px;">
+                        <div class="loading-spinner"></div>
+                        <p>Loading outlets...</p>
                     </div>
                 </div>
 
@@ -498,7 +502,8 @@
                             back: '返回',
                             checkingAuth: '正在检查身份验证...'
                         }
-                    }
+                    },
+                    isLoadingOutlets: false
                 };
             },
             computed: {
@@ -589,12 +594,14 @@
                         });
                 },
                 async fetchOutlets() {
+                    this.isLoadingOutlets = true;
                     const outletsRef = collection(db, 'outlets');
                     const querySnapshot = await getDocs(outletsRef);
                     this.outlets = querySnapshot.docs.map(doc => ({
                         id: doc.id,
                         ...doc.data()
                     }));
+                    this.isLoadingOutlets = false;
                 },
                 async exportToPDF() {
                     const { jsPDF } = window.jspdf;
