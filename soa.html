@@ -338,9 +338,10 @@
         </header>
 
         <div class="container">
-            <div v-if="isCheckingAuth" class="auth-loading">
+            <div v-if="isCheckingAuth || isLoadingOutlets" class="auth-loading">
                 <div class="loading-spinner"></div>
-                <p>{{ t('checkingAuth') || 'Checking authentication...' }}</p>
+                <p v-if="isCheckingAuth">{{ t('checkingAuth') || 'Checking authentication...' }}</p>
+                <p v-else>Loading outlets...</p>
             </div>
 
             <div v-else-if="error" class="error-message">
@@ -378,10 +379,6 @@
                                 </option>
                             </select>
                         </div>
-                    </div>
-                    <div v-if="isLoadingOutlets" class="auth-loading" style="margin-top: 10px;">
-                        <div class="loading-spinner"></div>
-                        <p>Loading outlets...</p>
                     </div>
                 </div>
 
