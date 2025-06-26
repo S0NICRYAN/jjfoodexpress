@@ -770,7 +770,7 @@
                 
                 // Remove product from outlet using _outletDocId
                 const removeFromOutlet = async (product) => {
-                    if (!confirm(t('removeConfirm', product.name))) {
+                    if (!confirm(t('Remove Product from Outlet?', product.name))) {
                         return;
                     }
                     message.value = { type: '', text: '' };
