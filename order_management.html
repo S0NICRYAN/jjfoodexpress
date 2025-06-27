@@ -236,6 +236,16 @@
                                 </option>
                             </select>
                         </div>
+                        <div class="filter-group">
+                            <label for="statusFilter">{{ t('selectStatus') }}</label>
+                            <select id="statusFilter" class="form-control" v-model="selectedStatus">
+                                <option value="">{{ t('selectStatusPlaceholder') }}</option>
+                                <option value="pending">{{ t('statusPending') }}</option>
+                                <option value="processing">{{ t('statusProcessing') }}</option>
+                                <option value="delivered">{{ t('statusDelivered') }}</option>
+                                <option value="cancelled">{{ t('statusCancelled') }}</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="filter-row">
                         <div class="filter-group">
@@ -556,7 +566,9 @@
                     selectOutletPrefix: { zh: '选择门店前缀', en: 'Select Outlet Prefix' },
                     selectPrefixPlaceholder: { zh: '请选择前缀', en: 'Please select a prefix' },
                     selectOutlet: { zh: '选择门店', en: 'Select Outlet' },
-                    selectOutletPlaceholder: { zh: '请选择门店', en: 'Please select an outlet' }
+                    selectOutletPlaceholder: { zh: '请选择门店', en: 'Please select an outlet' },
+                    selectStatus: { zh: '选择状态', en: 'Select Status' },
+                    selectStatusPlaceholder: { zh: '请选择状态', en: 'Please select a status' }
                 };
                             
                 // Function to get translation
@@ -585,6 +597,7 @@
                 const outlets = ref([]);
                 const selectedPrefix = ref('');
                 const selectedOutlet = ref('');
+                const selectedStatus = ref('');
                 
                 // Compute all unique prefixes
                 const outletPrefixes = computed(() => {
@@ -645,6 +658,13 @@
                             }
                             return true;
                         });
+                    }
+                    
+                    // Status filter
+                    if (selectedStatus.value) {
+                        filtered = filtered.filter(order => 
+                            order.status?.toLowerCase() === selectedStatus.value
+                        );
                     }
                     
                     return filtered;
@@ -1123,6 +1143,7 @@
                     filteredOutletsByPrefix,
                     selectedPrefix,
                     selectedOutlet,
+                    selectedStatus,
                     filteredOrders,
                     showModal,
                     selectedOrder,
