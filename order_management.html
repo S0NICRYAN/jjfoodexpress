@@ -270,9 +270,9 @@
                         <div class="filter-group">
                             <label>{{ t('dateRange') }}</label>
                             <div class="date-filter-group">
-                                <input type="date" v-model="startDate" class="form-control">
+                                <input type="date" v-model="startDate" class="form-control" :max="endDate || undefined">
                                 <span>-</span>
-                                <input type="date" v-model="endDate" class="form-control">
+                                <input type="date" v-model="endDate" class="form-control" :min="startDate || undefined">
                             </div>
                         </div>
                         <div class="filter-group">
@@ -605,7 +605,8 @@
                     selectOutletPlaceholder: { zh: '请选择门店', en: 'Please select an outlet' },
                     selectStatus: { zh: '选择状态', en: 'Select Status' },
                     selectStatusPlaceholder: { zh: '请选择状态', en: 'Please select a status' },
-                    resetFilters: { zh: '重置筛选', en: 'Reset Filters' }
+                    resetFilters: { zh: '重置筛选', en: 'Reset Filters' },
+                    confirmCancel: { zh: '您确定要取消此订单吗？', en: 'Are you sure you want to cancel this order?' }
                 };
                             
                 // Function to get translation
@@ -1121,18 +1122,22 @@
                 };
                 // Update order status
                 const updateOrderStatus = async (order, newStatus) => {
+                    // If cancelling, show confirmation dialog
+                    if (newStatus === 'cancelled') {
+                        const confirmMsg = t('confirmCancel');
+                        if (!window.confirm(confirmMsg)) {
+                            return;
+                        }
+                    }
                     updatingStatus.value = true;
-                    
                     try {
                         const orderRef = doc(db, 'orders', order.id);
                         await updateDoc(orderRef, {
                             status: newStatus,
                             updatedAt: serverTimestamp()
                         });
-                        
                         // Update local data
                         order.status = newStatus;
-                        
                         // Show success message
                         alert(t('orderStatusUpdated'));
                     } catch (error) {
@@ -1207,6 +1212,11 @@
                 const loadNextPage = async () => {
                     currentPage.value++;
                     await loadOrders('next');
+                    // If no orders, go back to previous page
+                    if (orders.value.length === 0 && currentPage.value > 1) {
+                        currentPage.value--;
+                        await loadOrders('prev');
+                    }
                 };
                 const loadPrevPage = async () => {
                     if (currentPage.value > 1) {
@@ -1214,6 +1224,13 @@
                         await loadOrders('prev');
                     }
                 };
+                
+                // Prevent startDate > endDate
+                watch([startDate, endDate], ([newStart, newEnd]) => {
+                    if (newStart && newEnd && newStart > newEnd) {
+                        endDate.value = newStart;
+                    }
+                });
                 
                 return {
                     currentLang,
