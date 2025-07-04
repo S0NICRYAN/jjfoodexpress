@@ -568,7 +568,7 @@
                     window.history.back();
                 },
                 formatDate(date) {
-                    return new Date(date).toLocaleDateString();
+                    return new Date(date).toLocaleDateString('en-GB');
                 },
                 async fetchOrders() {
                     if (!this.selectedMonth || !this.selectedOutlet) return;
