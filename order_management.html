@@ -157,6 +157,25 @@
             font-size: 0.9rem;
             min-height: 35px;
         }
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .pagination-controls button {
+            padding: 6px 16px;
+            font-size: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background: #f8f9fa;
+            cursor: pointer;
+        }
+        .pagination-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -317,6 +336,12 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Pagination controls -->
+                    <div class="pagination-controls" v-if="orders.length">
+                        <button @click="loadPrevPage" :disabled="currentPage === 1">Previous</button>
+                        <span>Page {{ currentPage }}</span>
+                        <button @click="loadNextPage" :disabled="orders.length < pageSize">Next</button>
+                    </div>
                 </div>
             </div>
             
@@ -475,7 +500,9 @@
             query,
             where,
             Timestamp,
-            serverTimestamp
+            serverTimestamp,
+            startAfter,
+            limit
         } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
         import { 
             getAuth,
@@ -602,6 +629,12 @@
                 const selectedOrder = ref(null);
                 const updatingStatus = ref(false);
                 const message = ref({ type: '', text: '' });
+                // Pagination state
+                const pageSize = ref(20);
+                const currentPage = ref(1);
+                const lastVisible = ref(null);
+                const firstVisible = ref(null);
+                const pageCursors = ref([]); // Stack of cursors for going back
                 
                 // Outlet filtering data
                 const outlets = ref([]);
@@ -724,27 +757,44 @@
                     }
                 };
                 
-                // Load orders
-                const loadOrders = async () => {
+                // Load orders (paginated)
+                const loadOrders = async (direction = 'next') => {
                     isLoading.value = true;
-                    
                     try {
-                        const ordersRef = collection(db, 'orders');
-                        const q = query(ordersRef, orderBy('createdAt', 'desc'));
+                        let q;
+                        if (direction === 'next' && lastVisible.value) {
+                            q = query(
+                                collection(db, 'orders'),
+                                orderBy('createdAt', 'desc'),
+                                startAfter(lastVisible.value),
+                                limit(pageSize.value)
+                            );
+                        } else if (direction === 'prev' && pageCursors.value.length > 1) {
+                            // Remove last cursor (current page), go to previous
+                            pageCursors.value.pop();
+                            const prevCursor = pageCursors.value[pageCursors.value.length - 1];
+                            q = query(
+                                collection(db, 'orders'),
+                                orderBy('createdAt', 'desc'),
+                                startAfter(prevCursor),
+                                limit(pageSize.value)
+                            );
+                        } else {
+                            // First page
+                            q = query(
+                                collection(db, 'orders'),
+                                orderBy('createdAt', 'desc'),
+                                limit(pageSize.value)
+                            );
+                        }
                         const snapshot = await getDocs(q);
-                        
-                        const loadedOrders = [];
-                        
-                        for (const doc of snapshot.docs) {
+                        const loadedOrders = snapshot.docs.map(doc => {
                             const data = doc.data();
-                            
-                            // Calculate items count
                             let itemsCount = 0;
                             if (data.items) {
                                 itemsCount = Object.keys(data.items).length;
                             }
-                            
-                            loadedOrders.push({
+                            return {
                                 id: doc.id,
                                 orderId: data.id || doc.id,
                                 orderNumber: data.orderNumber,
@@ -761,10 +811,15 @@
                                 itemsCount: itemsCount,
                                 referenceNumber: data.referenceNumber,
                                 remarks: data.remarks
-                            });
-                        }
-                        
+                            };
+                        });
                         orders.value = loadedOrders;
+                        firstVisible.value = snapshot.docs[0];
+                        lastVisible.value = snapshot.docs[snapshot.docs.length - 1];
+                        // Track cursors for going back
+                        if (direction === 'next') {
+                            pageCursors.value.push(snapshot.docs[0]);
+                        }
                     } catch (error) {
                         console.error('Error loading orders:', error);
                     } finally {
@@ -1118,6 +1173,8 @@
                     
                     endDate.value = today.toISOString().split('T')[0];
                     startDate.value = thirtyDaysAgo.toISOString().split('T')[0];
+                    // Load first page of orders
+                    loadOrders();
                 });
                 
                 // Load orders when authenticated
@@ -1144,6 +1201,18 @@
                     selectedStatus.value = '';
                     startDate.value = '';
                     endDate.value = '';
+                };
+                
+                // Pagination navigation
+                const loadNextPage = async () => {
+                    currentPage.value++;
+                    await loadOrders('next');
+                };
+                const loadPrevPage = async () => {
+                    if (currentPage.value > 1) {
+                        currentPage.value--;
+                        await loadOrders('prev');
+                    }
                 };
                 
                 return {
@@ -1177,7 +1246,12 @@
                     updateOrderStatus,
                     updatingStatus,
                     message,
-                    resetFilters
+                    resetFilters,
+                    // Pagination
+                    pageSize,
+                    currentPage,
+                    loadNextPage,
+                    loadPrevPage
                 };
             }
         }).mount('#app');
