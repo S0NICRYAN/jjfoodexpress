@@ -338,9 +338,9 @@
                     </div>
                     <!-- Pagination controls -->
                     <div class="pagination-controls" v-if="orders.length">
-                        <button @click="loadPrevPage" :disabled="currentPage === 1">Previous</button>
-                        <span>Page {{ currentPage }}</span>
-                        <button @click="loadNextPage" :disabled="orders.length < pageSize">Next</button>
+                        <button @click="loadPrevPage" :disabled="currentPage === 1">{{ t('previous') }}</button>
+                        <span>{{ t('page') }} {{ currentPage }}</span>
+                        <button @click="loadNextPage" :disabled="!hasNextPage">{{ t('next') }}</button>
                     </div>
                 </div>
             </div>
@@ -636,6 +636,7 @@
                 const lastVisible = ref(null);
                 const firstVisible = ref(null);
                 const pageCursors = ref([]); // Stack of cursors for going back
+                const hasNextPage = ref(false);
                 
                 // Outlet filtering data
                 const outlets = ref([]);
@@ -758,7 +759,7 @@
                     }
                 };
                 
-                // Load orders (paginated)
+                // Load orders (paginated, with lookahead)
                 const loadOrders = async (direction = 'next') => {
                     isLoading.value = true;
                     try {
@@ -768,7 +769,7 @@
                                 collection(db, 'orders'),
                                 orderBy('createdAt', 'desc'),
                                 startAfter(lastVisible.value),
-                                limit(pageSize.value)
+                                limit(pageSize.value + 1)
                             );
                         } else if (direction === 'prev' && pageCursors.value.length > 1) {
                             // Remove last cursor (current page), go to previous
@@ -778,18 +779,20 @@
                                 collection(db, 'orders'),
                                 orderBy('createdAt', 'desc'),
                                 startAfter(prevCursor),
-                                limit(pageSize.value)
+                                limit(pageSize.value + 1)
                             );
                         } else {
                             // First page
                             q = query(
                                 collection(db, 'orders'),
                                 orderBy('createdAt', 'desc'),
-                                limit(pageSize.value)
+                                limit(pageSize.value + 1)
                             );
                         }
                         const snapshot = await getDocs(q);
-                        const loadedOrders = snapshot.docs.map(doc => {
+                        const docs = snapshot.docs;
+                        hasNextPage.value = docs.length > pageSize.value;
+                        const loadedOrders = docs.slice(0, pageSize.value).map(doc => {
                             const data = doc.data();
                             let itemsCount = 0;
                             if (data.items) {
@@ -815,11 +818,11 @@
                             };
                         });
                         orders.value = loadedOrders;
-                        firstVisible.value = snapshot.docs[0];
-                        lastVisible.value = snapshot.docs[snapshot.docs.length - 1];
+                        firstVisible.value = docs[0];
+                        lastVisible.value = docs[Math.min(pageSize.value - 1, docs.length - 1)];
                         // Track cursors for going back
                         if (direction === 'next') {
-                            pageCursors.value.push(snapshot.docs[0]);
+                            pageCursors.value.push(docs[0]);
                         }
                     } catch (error) {
                         console.error('Error loading orders:', error);
@@ -1212,11 +1215,6 @@
                 const loadNextPage = async () => {
                     currentPage.value++;
                     await loadOrders('next');
-                    // If no orders, go back to previous page
-                    if (orders.value.length === 0 && currentPage.value > 1) {
-                        currentPage.value--;
-                        await loadOrders('prev');
-                    }
                 };
                 const loadPrevPage = async () => {
                     if (currentPage.value > 1) {
@@ -1268,7 +1266,8 @@
                     pageSize,
                     currentPage,
                     loadNextPage,
-                    loadPrevPage
+                    loadPrevPage,
+                    hasNextPage
                 };
             }
         }).mount('#app');
