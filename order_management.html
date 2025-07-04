@@ -337,10 +337,15 @@
                         </div>
                     </div>
                     <!-- Pagination controls -->
-                    <div class="pagination-controls" v-if="orders.length">
-                        <button @click="loadPrevPage" :disabled="currentPage === 1">{{ t('previous') }}</button>
-                        <span>{{ t('page') }} {{ currentPage }}</span>
-                        <button @click="loadNextPage" :disabled="!hasNextPage">{{ t('next') }}</button>
+                    <div class="pagination-controls" v-if="allFilteredOrders.length > filteredPageSize">
+                        <button @click="goToPrevPage" :disabled="!filteredHasPrevPage">{{ t('previous') }}</button>
+                        <span>{{ t('page') }} {{ filteredCurrentPage }} of {{ filteredTotalPages }}</span>
+                        <button @click="goToNextPage" :disabled="!filteredHasNextPage">{{ t('next') }}</button>
+                    </div>
+                    
+                    <!-- Show total count when filtered -->
+                    <div v-if="allFilteredOrders.length !== orders.length" class="filter-info" style="text-align: center; margin-top: 10px; color: #666; font-size: 0.9rem;">
+                        {{ t('showingFiltered') || 'Showing' }} {{ allFilteredOrders.length }} {{ t('of') || 'of' }} {{ orders.length }} {{ t('totalOrders') || 'total orders' }}
                     </div>
                 </div>
             </div>
@@ -606,7 +611,13 @@
                     selectStatus: { zh: '选择状态', en: 'Select Status' },
                     selectStatusPlaceholder: { zh: '请选择状态', en: 'Please select a status' },
                     resetFilters: { zh: '重置筛选', en: 'Reset Filters' },
-                    confirmCancel: { zh: '您确定要取消此订单吗？', en: 'Are you sure you want to cancel this order?' }
+                    confirmCancel: { zh: '您确定要取消此订单吗？', en: 'Are you sure you want to cancel this order?' },
+                    showingFiltered: { zh: '显示', en: 'Showing' },
+                    of: { zh: '共', en: 'of' },
+                    totalOrders: { zh: '个订单', en: 'total orders' },
+                    page: { zh: '第', en: 'Page' },
+                    previous: { zh: '上一页', en: 'Previous' },
+                    next: { zh: '下一页', en: 'Next' }
                 };
                             
                 // Function to get translation
@@ -638,6 +649,10 @@
                 const pageCursors = ref([]); // Stack of cursors for going back
                 const hasNextPage = ref(false);
                 
+                // Client-side pagination for filtered results
+                const filteredCurrentPage = ref(1);
+                const filteredPageSize = ref(20);
+                
                 // Outlet filtering data
                 const outlets = ref([]);
                 const selectedPrefix = ref('');
@@ -660,8 +675,8 @@
                     return outlets.value.filter(outlet => outlet.id.startsWith(selectedPrefix.value + '-'));
                 });
                 
-                // Filter orders
-                const filteredOrders = computed(() => {
+                // Filter orders (without pagination)
+                const allFilteredOrders = computed(() => {
                     let filtered = orders.value;
                     
                     // Search filter
@@ -713,6 +728,27 @@
                     }
                     
                     return filtered;
+                });
+                
+                // Apply pagination to filtered results
+                const filteredOrders = computed(() => {
+                    const filtered = allFilteredOrders.value;
+                    const startIndex = (filteredCurrentPage.value - 1) * filteredPageSize.value;
+                    const endIndex = startIndex + filteredPageSize.value;
+                    return filtered.slice(startIndex, endIndex);
+                });
+                
+                // Pagination computed properties for filtered results
+                const filteredTotalPages = computed(() => {
+                    return Math.ceil(allFilteredOrders.value.length / filteredPageSize.value);
+                });
+                
+                const filteredHasNextPage = computed(() => {
+                    return filteredCurrentPage.value < filteredTotalPages.value;
+                });
+                
+                const filteredHasPrevPage = computed(() => {
+                    return filteredCurrentPage.value > 1;
                 });
                 
                 // Format date
@@ -1209,9 +1245,33 @@
                     selectedStatus.value = '';
                     startDate.value = '';
                     endDate.value = '';
+                    filteredCurrentPage.value = 1;
                 };
                 
-                // Pagination navigation
+                // Reset filtered pagination when filters change
+                watch([searchQuery, selectedPrefix, selectedOutlet, selectedStatus, startDate, endDate], () => {
+                    filteredCurrentPage.value = 1;
+                });
+                
+                // Pagination navigation for filtered results
+                const goToNextPage = async () => {
+                    if (filteredHasNextPage.value) {
+                        filteredCurrentPage.value++;
+                    }
+                    
+                    // Auto-load more data if we're near the end and there might be more
+                    const remainingFilteredPages = filteredTotalPages.value - filteredCurrentPage.value;
+                    if (remainingFilteredPages <= 1 && hasNextPage.value && !isLoading.value) {
+                        await loadOrders('next');
+                    }
+                };
+                const goToPrevPage = () => {
+                    if (filteredHasPrevPage.value) {
+                        filteredCurrentPage.value--;
+                    }
+                };
+                
+                // Firebase pagination (load more data when needed)
                 const loadNextPage = async () => {
                     currentPage.value++;
                     await loadOrders('next');
@@ -1249,6 +1309,7 @@
                     selectedOutlet,
                     selectedStatus,
                     filteredOrders,
+                    allFilteredOrders,
                     showModal,
                     selectedOrder,
                     formatDate,
@@ -1262,7 +1323,15 @@
                     updatingStatus,
                     message,
                     resetFilters,
-                    // Pagination
+                    // Filtered pagination
+                    filteredCurrentPage,
+                    filteredPageSize,
+                    filteredTotalPages,
+                    filteredHasNextPage,
+                    filteredHasPrevPage,
+                    goToNextPage,
+                    goToPrevPage,
+                    // Firebase pagination (kept for potential future use)
                     pageSize,
                     currentPage,
                     loadNextPage,
