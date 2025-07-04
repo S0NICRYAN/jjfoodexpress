@@ -660,63 +660,48 @@
                     return outlets.value.filter(outlet => outlet.id.startsWith(selectedPrefix.value + '-'));
                 });
                 
-                // Load orders (paginated, with lookahead and Firestore filters)
-                const loadOrders = async (direction = 'next') => {
+                // Load orders (hybrid approach: recent orders + smart filtering)
+                const allOrders = ref([]);
+                const isUsingDateFilter = computed(() => {
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+                    
+                    return startDate.value && startDate.value < thirtyDaysAgoStr;
+                });
+                const loadOrders = async () => {
                     isLoading.value = true;
                     try {
                         let baseRef = collection(db, 'orders');
                         let clauses = [];
-                        // Firestore filters
-                        if (selectedPrefix.value) {
-                            clauses.push(where('outletId', '>=', selectedPrefix.value + '-'));
-                            clauses.push(where('outletId', '<', selectedPrefix.value + '-\uf8ff'));
-                        }
-                        if (selectedOutlet.value) {
-                            clauses.push(where('outletId', '==', selectedOutlet.value));
-                        }
-                        if (selectedStatus.value) {
-                            clauses.push(where('status', '==', selectedStatus.value));
-                        }
-                        if (startDate.value) {
-                            clauses.push(where('createdAt', '>=', new Date(startDate.value)));
-                        }
-                        if (endDate.value) {
-                            // Add one day to include the end date
-                            const end = new Date(endDate.value);
-                            end.setDate(end.getDate() + 1);
-                            clauses.push(where('createdAt', '<', end));
-                        }
-                        let q;
-                        if (direction === 'next' && lastVisible.value) {
-                            q = query(
-                                baseRef,
-                                ...clauses,
-                                orderBy('createdAt', 'desc'),
-                                startAfter(lastVisible.value),
-                                limit(pageSize.value + 1)
-                            );
-                        } else if (direction === 'prev' && pageCursors.value.length > 1) {
-                            pageCursors.value.pop();
-                            const prevCursor = pageCursors.value[pageCursors.value.length - 1];
-                            q = query(
-                                baseRef,
-                                ...clauses,
-                                orderBy('createdAt', 'desc'),
-                                startAfter(prevCursor),
-                                limit(pageSize.value + 1)
-                            );
+                        
+                        // If using date filter for older orders, apply server-side filters
+                        if (isUsingDateFilter.value) {
+                            if (selectedOutlet.value) {
+                                clauses.push(where('outletId', '==', selectedOutlet.value));
+                            }
+                            if (selectedStatus.value) {
+                                clauses.push(where('status', '==', selectedStatus.value));
+                            }
+                            if (startDate.value) {
+                                clauses.push(where('createdAt', '>=', new Date(startDate.value)));
+                            }
+                            if (endDate.value) {
+                                const end = new Date(endDate.value);
+                                end.setDate(end.getDate() + 1);
+                                clauses.push(where('createdAt', '<', end));
+                            }
                         } else {
-                            q = query(
-                                baseRef,
-                                ...clauses,
-                                orderBy('createdAt', 'desc'),
-                                limit(pageSize.value + 1)
-                            );
+                            // For recent orders, just get last 30 days
+                            const thirtyDaysAgo = new Date();
+                            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                            clauses.push(where('createdAt', '>=', thirtyDaysAgo));
                         }
+                        
+                        const q = query(baseRef, ...clauses, orderBy('createdAt', 'desc'));
                         const snapshot = await getDocs(q);
-                        const docs = snapshot.docs;
-                        hasNextPage.value = docs.length > pageSize.value;
-                        const loadedOrders = docs.slice(0, pageSize.value).map(doc => {
+                        
+                        allOrders.value = snapshot.docs.map(doc => {
                             const data = doc.data();
                             let itemsCount = 0;
                             if (data.items) {
@@ -734,24 +719,77 @@
                                 outletAddress: data.outletAddress,
                                 grandTotal: data.grandTotal || 0,
                                 subTotal: data.subTotal || 0,
-                                gst: 0.09, // Fixed GST at 9%
+                                gst: 0.09,
                                 items: data.items ? Object.values(data.items) : [],
                                 itemsCount: itemsCount,
                                 referenceNumber: data.referenceNumber,
                                 remarks: data.remarks
                             };
                         });
-                        orders.value = loadedOrders;
-                        firstVisible.value = docs[0];
-                        lastVisible.value = docs[Math.min(pageSize.value - 1, docs.length - 1)];
-                        if (direction === 'next') {
-                            pageCursors.value.push(docs[0]);
-                        }
+                        
+                        applyClientSideFiltersAndPagination();
                     } catch (error) {
                         console.error('Error loading orders:', error);
+                        allOrders.value = [];
+                        orders.value = [];
                     } finally {
                         isLoading.value = false;
                     }
+                };
+                
+                // Apply filters and pagination client-side
+                const applyClientSideFiltersAndPagination = () => {
+                    let filtered = [...allOrders.value];
+                    
+                    // Apply client-side filters (only if not using date filter for older orders)
+                    if (!isUsingDateFilter.value) {
+                        if (selectedPrefix.value) {
+                            filtered = filtered.filter(order => 
+                                order.outletId?.startsWith(selectedPrefix.value + '-')
+                            );
+                        }
+                        if (selectedOutlet.value) {
+                            filtered = filtered.filter(order => 
+                                order.outletId === selectedOutlet.value
+                            );
+                        }
+                        if (selectedStatus.value) {
+                            filtered = filtered.filter(order => 
+                                order.status?.toLowerCase() === selectedStatus.value
+                            );
+                        }
+                        if (startDate.value || endDate.value) {
+                            filtered = filtered.filter(order => {
+                                const orderDate = order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+                                const orderDateStr = orderDate.toISOString().split('T')[0];
+                                
+                                if (startDate.value && endDate.value) {
+                                    return orderDateStr >= startDate.value && orderDateStr <= endDate.value;
+                                } else if (startDate.value) {
+                                    return orderDateStr >= startDate.value;
+                                } else if (endDate.value) {
+                                    return orderDateStr <= endDate.value;
+                                }
+                                return true;
+                            });
+                        }
+                    }
+                    
+                    // Apply search filter
+                    if (searchQuery.value) {
+                        const query = searchQuery.value.toLowerCase();
+                        filtered = filtered.filter(order => 
+                            order.orderId?.toLowerCase().includes(query) ||
+                            order.outletName?.toLowerCase().includes(query) ||
+                            order.outletId?.toLowerCase().includes(query)
+                        );
+                    }
+                    
+                    // Apply pagination
+                    const start = (currentPage.value - 1) * pageSize.value;
+                    const end = start + pageSize.value;
+                    orders.value = filtered.slice(start, end);
+                    hasNextPage.value = end < filtered.length;
                 };
                 
                 // Load outlets from Firestore
@@ -1085,27 +1123,21 @@
                     // Check authentication
                     onAuthStateChanged(auth, (user) => {
                         checkAuthStatus(user);
-                        
                         // Show app and hide loading screen
                         document.getElementById('app').classList.add('loaded');
                         document.getElementById('initial-loading').style.display = 'none';
                     });
-                    
                     // Load saved language preference
                     const savedLang = localStorage.getItem('preferred_language');
                     if (savedLang && (savedLang === 'zh' || savedLang === 'en')) {
                         currentLang.value = savedLang;
                     }
-                    
                     // Set default date range (last 30 days)
                     const today = new Date();
                     const thirtyDaysAgo = new Date(today);
                     thirtyDaysAgo.setDate(today.getDate() - 30);
-                    
                     endDate.value = today.toISOString().split('T')[0];
                     startDate.value = thirtyDaysAgo.toISOString().split('T')[0];
-                    // Load first page of orders
-                    loadOrders();
                 });
                 
                 // Load orders when authenticated
@@ -1132,23 +1164,19 @@
                     selectedStatus.value = '';
                     startDate.value = '';
                     endDate.value = '';
-                    // Reset pagination
                     currentPage.value = 1;
-                    lastVisible.value = null;
-                    firstVisible.value = null;
-                    pageCursors.value = [];
                     loadOrders();
                 };
                 
                 // Pagination navigation
-                const loadNextPage = async () => {
+                const loadNextPage = () => {
                     currentPage.value++;
-                    await loadOrders('next');
+                    applyClientSideFiltersAndPagination();
                 };
-                const loadPrevPage = async () => {
+                const loadPrevPage = () => {
                     if (currentPage.value > 1) {
                         currentPage.value--;
-                        await loadOrders('prev');
+                        applyClientSideFiltersAndPagination();
                     }
                 };
                 
@@ -1160,13 +1188,25 @@
                 });
                 
                 // Watch filters and reload orders when they change
-                watch([selectedPrefix, selectedOutlet, selectedStatus, startDate, endDate], () => {
+                watch([selectedPrefix, selectedOutlet, selectedStatus, startDate, endDate], async () => {
                     currentPage.value = 1;
-                    lastVisible.value = null;
-                    firstVisible.value = null;
-                    pageCursors.value = [];
-                    loadOrders();
+                    if (isUsingDateFilter.value) {
+                        // For older date ranges, reload from server
+                        await loadOrders();
+                    } else {
+                        // For recent orders, just reapply filters
+                        applyClientSideFiltersAndPagination();
+                    }
                 });
+                
+                // Watch search query separately (always client-side)
+                watch(searchQuery, () => {
+                    currentPage.value = 1;
+                    applyClientSideFiltersAndPagination();
+                });
+                
+                // Filter orders
+                const filteredOrders = computed(() => orders.value);
                 
                 return {
                     currentLang,
