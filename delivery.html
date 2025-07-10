@@ -134,6 +134,7 @@
                     this.message = { text: '', type: '' };
                     
                     try {
+                        console.log('Loading delivery items for date:', this.deliveryDate);
                         // Calculate the date range based on the selected delivery date
                         const deliveryDate = new Date(this.deliveryDate);
                         
@@ -148,70 +149,58 @@
                         
                         const ordersRef = collection(db, 'orders');
                         
-                        // Query for orders from previous day after 4:30 PM
-                        const previousDayQuery = query(
+                        // Get all processing orders and filter by date/time in JavaScript
+                        const allOrdersQuery = query(
                             ordersRef,
                             where('status', '==', 'processing'),
-                            where('createdAt', '>', previousDayAfter430),
                             orderBy('createdAt', 'desc')
                         );
                         
-                        // Query for orders from current day before 4:30 PM
-                        const currentDayQuery = query(
-                            ordersRef,
-                            where('status', '==', 'processing'),
-                            where('createdAt', '<=', currentDayBefore430),
-                            orderBy('createdAt', 'desc')
-                        );
-                        
-                        // Get both sets of orders
-                        const [previousDaySnapshot, currentDaySnapshot] = await Promise.all([
-                            getDocs(previousDayQuery),
-                            getDocs(currentDayQuery)
-                        ]);
+                        const allOrdersSnapshot = await getDocs(allOrdersQuery);
                         
                         const items = [];
                         
-                        // Process previous day orders (after 4:30 PM)
-                        previousDaySnapshot.forEach(doc => {
+                        // Process all orders and filter by date/time
+                        allOrdersSnapshot.forEach(doc => {
                             const data = doc.data();
                             const orderTime = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-                            if (orderTime.getHours() >= 16 && orderTime.getMinutes() >= 30) {
-                                if (data.items) {
-                                    Object.values(data.items).forEach(item => {
-                                        items.push({
-                                            ...item,
-                                            orderId: data.orderId || doc.id,
-                                            outletName: data.outletName || data.outletId,
-                                            outletId: data.outletId,
-                                            createdAt: data.createdAt
-                                        });
-                                    });
-                                }
+                            const orderDate = new Date(orderTime);
+                            const deliveryDateObj = new Date(deliveryDate);
+                            const previousDay = new Date(deliveryDate);
+                            previousDay.setDate(previousDay.getDate() - 1);
+                            
+                            // Check if order qualifies for delivery
+                            let shouldInclude = false;
+                            
+                            // Previous day after 4:30 PM
+                            if (orderDate.toDateString() === previousDay.toDateString() && 
+                                (orderTime.getHours() > 16 || (orderTime.getHours() === 16 && orderTime.getMinutes() >= 30))) {
+                                shouldInclude = true;
                             }
-                        });
-                        
-                        // Process current day orders (before 4:30 PM)
-                        currentDaySnapshot.forEach(doc => {
-                            const data = doc.data();
-                            const orderTime = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-                            if (orderTime.getHours() < 16 || (orderTime.getHours() === 16 && orderTime.getMinutes() < 30)) {
-                                if (data.items) {
-                                    Object.values(data.items).forEach(item => {
-                                        items.push({
-                                            ...item,
-                                            orderId: data.orderId || doc.id,
-                                            outletName: data.outletName || data.outletId,
-                                            outletId: data.outletId,
-                                            createdAt: data.createdAt
-                                        });
+                            
+                            // Current day before 4:30 PM
+                            if (orderDate.toDateString() === deliveryDateObj.toDateString() && 
+                                (orderTime.getHours() < 16 || (orderTime.getHours() === 16 && orderTime.getMinutes() < 30))) {
+                                shouldInclude = true;
+                            }
+                            
+                            if (shouldInclude && data.items) {
+                                Object.values(data.items).forEach(item => {
+                                    items.push({
+                                        ...item,
+                                        orderId: data.orderId || doc.id,
+                                        outletName: data.outletName || data.outletId,
+                                        outletId: data.outletId,
+                                        createdAt: data.createdAt
                                     });
-                                }
+                                });
                             }
                         });
                         
                         this.deliveryItems = items;
                         this.totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+                        
+                        console.log('Found items:', items.length, 'Total quantity:', this.totalItems);
                         
                         if (items.length === 0) {
                             this.message = { 
