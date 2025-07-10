@@ -993,7 +993,7 @@
                         
                         // Generate PDF
                         const { jsPDF } = window.jspdf;
-                        const doc = new jsPDF();
+                        const doc = new jsPDF('p', 'mm', 'a4'); // Explicitly set page format
                         let y = 20;
                         
                         // Company header
@@ -1070,7 +1070,7 @@
                         
                         // Table headers
                         const headers = ['S/N', 'DESCRIPTION', 'UOM', 'QTY', 'UNIT PRICE', 'AMOUNT'];
-                        const colWidths = [15, 60, 25, 20, 25, 25];
+                        const colWidths = [15, 55, 25, 20, 25, 30]; // Reduced DESCRIPTION width, increased AMOUNT width
                         let x = 20;
                         
                         // Draw header background
@@ -1123,19 +1123,28 @@
                         
                         // Totals
                         y += 10;
-                        const totalsX = 120;
+                        const totalsX = 95; // Moved left to give more space
+                        const amountX = 195; // Moved right to accommodate larger numbers
+                        
+                        // Format numbers with proper spacing for larger values
+                        const formatCurrency = (amount) => {
+                            return amount.toLocaleString('en-US', { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                            });
+                        };
                         
                         doc.text('TOTAL', totalsX, y);
-                        doc.text(`${totalSubtotal.toFixed(2)}`, 170, y, { align: 'right' });
+                        doc.text(formatCurrency(totalSubtotal), amountX, y, { align: 'right' });
                         y += 6;
                         
                         doc.text('ADD GST@9%', totalsX, y);
-                        doc.text(`${(totalSubtotal * 0.09).toFixed(2)}`, 170, y, { align: 'right' });
+                        doc.text(formatCurrency(totalSubtotal * 0.09), amountX, y, { align: 'right' });
                         y += 6;
                         
                         doc.setFontSize(12);
                         doc.text('TOTAL DUE IN S$', totalsX, y);
-                        doc.text(`${(totalSubtotal * 1.09).toFixed(2)}`, 170, y, { align: 'right' });
+                        doc.text(formatCurrency(totalSubtotal * 1.09), amountX, y, { align: 'right' });
                         
                         // Signature section
                         y += 20;
