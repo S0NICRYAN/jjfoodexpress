@@ -312,6 +312,11 @@
             
             async mounted() {
                 console.log('Component mounted, checking authentication...');
+                
+                // Show the app immediately for debugging
+                document.getElementById('app').classList.add('loaded');
+                document.getElementById('initial-loading').style.display = 'none';
+                
                 // Check authentication
                 onAuthStateChanged(auth, (user) => {
                     console.log('Auth state changed:', user ? 'User logged in' : 'No user');
@@ -334,7 +339,7 @@
 </head>
 <body>
     <!-- Initial loading screen -->
-    <div id="initial-loading" class="app-loading">
+    <div id="initial-loading" class="app-loading" style="display: none;">
         <div class="app-loading-spinner"></div>
         <div class="app-loading-text">Loading...</div>
     </div>
