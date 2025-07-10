@@ -715,7 +715,7 @@
                 // Build Firebase query with current filters
                 const buildOrdersQuery = (direction = 'next') => {
                     let q = query(collection(db, 'orders'));
-                    
+                    let usingOutletPrefix = false;
                     // Apply filters
                     if (selectedOutlet.value && selectedOutlet.value.trim()) {
                         q = query(q, where('outletId', '==', selectedOutlet.value));
@@ -726,6 +726,7 @@
                             where('outletId', '>=', prefix),
                             where('outletId', '<', prefix + '\uf8ff')
                         );
+                        usingOutletPrefix = true;
                     }
                     
                     if (selectedStatus.value && selectedStatus.value.trim()) {
@@ -745,8 +746,12 @@
                         q = query(q, where('createdAt', '<=', Timestamp.fromDate(end)));
                     }
                     
-                    // Always order by createdAt
-                    q = query(q, orderBy('createdAt', 'desc'));
+                    // Always order by createdAt, but if using outlet prefix, order by outletId first
+                    if (usingOutletPrefix) {
+                        q = query(q, orderBy('outletId'), orderBy('createdAt', 'desc'));
+                    } else {
+                        q = query(q, orderBy('createdAt', 'desc'));
+                    }
                     
                     // Add pagination
                     if (direction === 'next' && lastVisible.value) {
