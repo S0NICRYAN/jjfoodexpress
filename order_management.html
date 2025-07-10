@@ -265,9 +265,9 @@
                         <div class="filter-group">
                             <label>{{ t('dateRange') }}</label>
                             <div class="date-filter-group">
-                                <input type="date" v-model="startDate" class="form-control" :max="endDate || undefined">
+                                <input type="date" v-model="startDate" class="form-control" :max="endDate || undefined" @change="handleStartDateChange">
                                 <span>-</span>
-                                <input type="date" v-model="endDate" class="form-control" :min="startDate || undefined">
+                                <input type="date" v-model="endDate" class="form-control" :min="startDate || undefined" @change="handleEndDateChange">
                             </div>
                         </div>
                         <div class="filter-group">
@@ -1281,12 +1281,21 @@
                     }
                 };
                 
-                // Prevent startDate > endDate
-                watch([startDate, endDate], ([newStart, newEnd]) => {
-                    if (newStart && newEnd && newStart > newEnd) {
-                        endDate.value = newStart;
+                // Handle start date change
+                const handleStartDateChange = () => {
+                    // If start date is after end date, adjust end date
+                    if (startDate.value && endDate.value && startDate.value > endDate.value) {
+                        endDate.value = startDate.value;
                     }
-                });
+                };
+                
+                // Handle end date change
+                const handleEndDateChange = () => {
+                    // If end date is before start date, adjust start date
+                    if (startDate.value && endDate.value && endDate.value < startDate.value) {
+                        startDate.value = endDate.value;
+                    }
+                };
                 
                 return {
                     currentLang,
@@ -1326,7 +1335,10 @@
                     goToPrevPage,
                     loadNextPage,
                     loadPrevPage,
-                    hasNextPage
+                    hasNextPage,
+                    // Date handlers
+                    handleStartDateChange,
+                    handleEndDateChange
                 };
             }
         }).mount('#app');
