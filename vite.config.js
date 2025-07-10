@@ -25,7 +25,8 @@ export default defineConfig({
         outlet_management: 'outlet_management.html',
         order_management:'order_management.html',
         soa:'soa.html',
-        product:'product.html'
+        product:'product.html',
+        delivery:'delivery.html'
       }
     }
   }
