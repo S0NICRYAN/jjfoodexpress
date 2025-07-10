@@ -151,7 +151,7 @@
                         // Query for orders from previous day after 4:30 PM
                         const previousDayQuery = query(
                             ordersRef,
-                            where('status', 'in', ['processing', 'pending']),
+                            where('status', '==', 'processing'),
                             where('createdAt', '>', previousDayAfter430),
                             orderBy('createdAt', 'desc')
                         );
@@ -159,7 +159,7 @@
                         // Query for orders from current day before 4:30 PM
                         const currentDayQuery = query(
                             ordersRef,
-                            where('status', 'in', ['processing', 'pending']),
+                            where('status', '==', 'processing'),
                             where('createdAt', '<=', currentDayBefore430),
                             orderBy('createdAt', 'desc')
                         );
