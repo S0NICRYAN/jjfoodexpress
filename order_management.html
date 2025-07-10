@@ -232,11 +232,6 @@
                     <h2>{{ t('filters') }} <span class="english-subtext" v-if="currentLang === 'zh'">Filters</span></h2>
                     <div class="filter-row">
                         <div class="filter-group">
-                            <label for="search">{{ t('search') }}</label>
-                            <input id="search" type="text" class="search-input" v-model="searchQuery" 
-                                :placeholder="t('searchOrders')">
-                        </div>
-                        <div class="filter-group">
                             <label for="outletPrefix">{{ t('selectOutletPrefix') }}</label>
                             <select id="outletPrefix" class="form-control" v-model="selectedPrefix">
                                 <option value="">{{ t('selectPrefixPlaceholder') }}</option>
@@ -292,12 +287,12 @@
                 
                 <div v-if="isLoading" class="loading">{{ t('loadingOrders') }}</div>
                 
-                <div v-else-if="filteredOrders.length === 0" class="empty-state">
+                <div v-else-if="orders.length === 0" class="empty-state">
                     {{ t('noOrdersFound') }}
                 </div>
                 
                 <div v-else class="orders-grid">
-                    <div v-for="order in filteredOrders" :key="order.id" class="order-card" @click="viewOrderDetails(order)">
+                    <div v-for="order in orders" :key="order.id" class="order-card" @click="viewOrderDetails(order)">
                         <div class="order-card-header">
                             <span class="order-id">{{ order.orderId }}</span>
                             <span :class="['order-status', getStatusClass(order?.status)]">
@@ -337,19 +332,10 @@
                         </div>
                     </div>
                     <!-- Pagination controls -->
-                    <div class="pagination-controls" v-if="showPaginationControls">
-                        <button @click="goToPrevPage" :disabled="!canGoToPrevPage">{{ t('previous') }}</button>
-                        <span v-if="hasActiveFilters">{{ t('page') }} {{ filteredCurrentPage }} of {{ filteredTotalPages }}</span>
-                        <span v-else>{{ t('page') }} {{ currentPage }}</span>
-                        <button @click="goToNextPage" :disabled="!canGoToNextPage">{{ t('next') }}</button>
-                    </div>
-                    
-                    <!-- Show total count when filtered -->
-                    <div v-if="hasActiveFilters || allFilteredOrders.length !== orders.length" class="filter-info" style="text-align: center; margin-top: 10px; color: #666; font-size: 0.9rem;">
-                        {{ t('showingFiltered') || 'Showing' }} {{ allFilteredOrders.length }} {{ t('of') || 'of' }} {{ orders.length }} {{ t('totalOrders') || 'total orders' }}
-                        <span v-if="!hasActiveFilters && allFilteredOrders.length !== orders.length" style="color: #e74c3c; font-size: 0.8rem;">
-                            ({{ orders.length - allFilteredOrders.length }} orders have missing/invalid data)
-                        </span>
+                    <div class="pagination-controls" v-if="currentPage > 1 || hasNextPage">
+                        <button @click="goToPrevPage" :disabled="currentPage === 1">{{ t('previous') }}</button>
+                        <span>{{ t('page') }} {{ currentPage }}</span>
+                        <button @click="goToNextPage" :disabled="!hasNextPage">{{ t('next') }}</button>
                     </div>
                 </div>
             </div>
@@ -559,9 +545,6 @@
                     appTitle: { zh: '订单管理系统', en: 'Order Management System' },
                     back: { zh: '返回', en: 'Back' },
                     filters: { zh: '筛选器', en: 'Filters' },
-                    search: { zh: '搜索', en: 'Search' },
-                    searchOrders: { zh: '搜索订单...', en: 'Search orders...' },
-                    filterByOutlet: { zh: '按门店筛选', en: 'Filter by Outlet' },
                     allOutlets: { zh: '所有门店', en: 'All Outlets' },
                     dateRange: { zh: '日期范围', en: 'Date Range' },
                     ordersList: { zh: '订单列表', en: 'Orders List' },
@@ -616,9 +599,6 @@
                     selectStatusPlaceholder: { zh: '请选择状态', en: 'Please select a status' },
                     resetFilters: { zh: '重置筛选', en: 'Reset Filters' },
                     confirmCancel: { zh: '您确定要取消此订单吗？', en: 'Are you sure you want to cancel this order?' },
-                    showingFiltered: { zh: '显示', en: 'Showing' },
-                    of: { zh: '共', en: 'of' },
-                    totalOrders: { zh: '个订单', en: 'total orders' },
                     page: { zh: '第', en: 'Page' },
                     previous: { zh: '上一页', en: 'Previous' },
                     next: { zh: '下一页', en: 'Next' }
@@ -638,24 +618,19 @@
                 // Data
                 const orders = ref([]);
                 const isLoading = ref(false);
-                const searchQuery = ref('');
                 const startDate = ref('');
                 const endDate = ref('');
                 const showModal = ref(false);
                 const selectedOrder = ref(null);
                 const updatingStatus = ref(false);
                 const message = ref({ type: '', text: '' });
-                // Pagination state
+                // Pagination state (server-side)
                 const pageSize = ref(20);
                 const currentPage = ref(1);
                 const lastVisible = ref(null);
                 const firstVisible = ref(null);
                 const pageCursors = ref([]); // Stack of cursors for going back
                 const hasNextPage = ref(false);
-                
-                // Client-side pagination for filtered results
-                const filteredCurrentPage = ref(1);
-                const filteredPageSize = ref(20);
                 
                 // Outlet filtering data
                 const outlets = ref([]);
@@ -679,125 +654,19 @@
                     return outlets.value.filter(outlet => outlet.id.startsWith(selectedPrefix.value + '-'));
                 });
                 
-                // Filter orders (without pagination)
-                const allFilteredOrders = computed(() => {
-                    let filtered = orders.value;
-                    
-                    // Search filter
-                    if (searchQuery.value && searchQuery.value.trim()) {
-                        const query = searchQuery.value.toLowerCase().trim();
-                        filtered = filtered.filter(order => 
-                            order.orderId?.toLowerCase().includes(query) ||
-                            order.outletName?.toLowerCase().includes(query) ||
-                            order.outletId?.toLowerCase().includes(query)
-                        );
-                    }
-                    
-                    // Outlet prefix filter
-                    if (selectedPrefix.value && selectedPrefix.value.trim()) {
-                        filtered = filtered.filter(order => 
-                            order.outletId?.startsWith(selectedPrefix.value + '-')
-                        );
-                    }
-                    
-                    // Specific outlet filter
-                    if (selectedOutlet.value && selectedOutlet.value.trim()) {
-                        filtered = filtered.filter(order => 
-                            order.outletId === selectedOutlet.value
-                        );
-                    }
-                    
-                    // Date range filter
-                    if ((startDate.value && startDate.value.trim()) || (endDate.value && endDate.value.trim())) {
-                        filtered = filtered.filter(order => {
-                            if (!order.createdAt) return false; // Skip orders without date
-                            
-                            try {
-                                const orderDate = order.createdAt?.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
-                                const orderDateStr = orderDate.toISOString().split('T')[0];
-                                
-                                if (startDate.value && endDate.value) {
-                                    return orderDateStr >= startDate.value && orderDateStr <= endDate.value;
-                                } else if (startDate.value) {
-                                    return orderDateStr >= startDate.value;
-                                } else if (endDate.value) {
-                                    return orderDateStr <= endDate.value;
-                                }
-                                return true;
-                            } catch (error) {
-                                console.warn('Invalid date in order:', order.orderId, error);
-                                return false; // Skip orders with invalid dates
-                            }
-                        });
-                    }
-                    
-                    // Status filter
-                    if (selectedStatus.value && selectedStatus.value.trim()) {
-                        filtered = filtered.filter(order => 
-                            order.status?.toLowerCase() === selectedStatus.value
-                        );
-                    }
-                    
-                    return filtered;
-                });
-                
-                // Apply pagination to filtered results
-                const filteredOrders = computed(() => {
-                    const filtered = allFilteredOrders.value;
-                    const startIndex = (filteredCurrentPage.value - 1) * filteredPageSize.value;
-                    const endIndex = startIndex + filteredPageSize.value;
-                    return filtered.slice(startIndex, endIndex);
-                });
-                
-                // Pagination computed properties for filtered results
-                const filteredTotalPages = computed(() => {
-                    return Math.ceil(allFilteredOrders.value.length / filteredPageSize.value);
-                });
-                
-                const filteredHasNextPage = computed(() => {
-                    return filteredCurrentPage.value < filteredTotalPages.value;
-                });
-                
-                const filteredHasPrevPage = computed(() => {
-                    return filteredCurrentPage.value > 1;
-                });
+                // Orders are now filtered at the database level
+                // No client-side filtering needed
                 
                 // Check if any filters are currently active
                 const hasActiveFilters = computed(() => {
-                    return (searchQuery.value && searchQuery.value.trim()) ||
-                           (selectedPrefix.value && selectedPrefix.value.trim()) ||
+                    return (selectedPrefix.value && selectedPrefix.value.trim()) ||
                            (selectedOutlet.value && selectedOutlet.value.trim()) ||
                            (selectedStatus.value && selectedStatus.value.trim()) ||
                            (startDate.value && startDate.value.trim()) ||
                            (endDate.value && endDate.value.trim());
                 });
                 
-                // Pagination control logic
-                const showPaginationControls = computed(() => {
-                    if (hasActiveFilters.value) {
-                        // Show pagination for filtered results if there are multiple pages
-                        return allFilteredOrders.value.length > filteredPageSize.value;
-                    } else {
-                        // Show pagination if there are multiple Firebase pages OR more data available
-                        return currentPage.value > 1 || hasNextPage.value;
-                    }
-                });
-                
-                const canGoToPrevPage = computed(() => {
-                    if (hasActiveFilters.value) {
-                        return filteredHasPrevPage.value;
-                    } else {
-                        return currentPage.value > 1;
-                    }
-                });
-                
-                const canGoToNextPage = computed(() => {
-                    if (hasActiveFilters.value) {
-                        return filteredHasNextPage.value;
-                    } else {
-                        return hasNextPage.value;
-                    }
-                });
+                // Simplified pagination logic (server-side only)
                 
                 // Format date
                 const formatDate = (timestamp) => {
@@ -843,39 +712,71 @@
                     }
                 };
                 
-                // Load orders (paginated, with lookahead)
+                // Build Firebase query with current filters
+                const buildOrdersQuery = (direction = 'next') => {
+                    let q = query(collection(db, 'orders'));
+                    
+                    // Apply filters
+                    if (selectedOutlet.value && selectedOutlet.value.trim()) {
+                        q = query(q, where('outletId', '==', selectedOutlet.value));
+                    } else if (selectedPrefix.value && selectedPrefix.value.trim()) {
+                        // Filter by prefix - need to use range queries
+                        const prefix = selectedPrefix.value + '-';
+                        q = query(q, 
+                            where('outletId', '>=', prefix),
+                            where('outletId', '<', prefix + '\uf8ff')
+                        );
+                    }
+                    
+                    if (selectedStatus.value && selectedStatus.value.trim()) {
+                        q = query(q, where('status', '==', selectedStatus.value));
+                    }
+                    
+                    // Date range filters
+                    if (startDate.value && startDate.value.trim()) {
+                        const start = new Date(startDate.value);
+                        start.setHours(0, 0, 0, 0);
+                        q = query(q, where('createdAt', '>=', Timestamp.fromDate(start)));
+                    }
+                    
+                    if (endDate.value && endDate.value.trim()) {
+                        const end = new Date(endDate.value);
+                        end.setHours(23, 59, 59, 999);
+                        q = query(q, where('createdAt', '<=', Timestamp.fromDate(end)));
+                    }
+                    
+                    // Always order by createdAt
+                    q = query(q, orderBy('createdAt', 'desc'));
+                    
+                    // Add pagination
+                    if (direction === 'next' && lastVisible.value) {
+                        q = query(q, startAfter(lastVisible.value));
+                    } else if (direction === 'prev' && pageCursors.value.length > 1) {
+                        // Remove last cursor (current page), go to previous
+                        pageCursors.value.pop();
+                        const prevCursor = pageCursors.value[pageCursors.value.length - 1];
+                        q = query(q, startAfter(prevCursor));
+                    }
+                    
+                    // Limit with lookahead
+                    q = query(q, limit(pageSize.value + 1));
+                    
+                    return q;
+                };
+                
+                // Load orders with server-side filtering
                 const loadOrders = async (direction = 'next') => {
                     isLoading.value = true;
                     try {
-                        let q;
-                        if (direction === 'next' && lastVisible.value) {
-                            q = query(
-                                collection(db, 'orders'),
-                                orderBy('createdAt', 'desc'),
-                                startAfter(lastVisible.value),
-                                limit(pageSize.value + 1)
-                            );
-                        } else if (direction === 'prev' && pageCursors.value.length > 1) {
-                            // Remove last cursor (current page), go to previous
-                            pageCursors.value.pop();
-                            const prevCursor = pageCursors.value[pageCursors.value.length - 1];
-                            q = query(
-                                collection(db, 'orders'),
-                                orderBy('createdAt', 'desc'),
-                                startAfter(prevCursor),
-                                limit(pageSize.value + 1)
-                            );
-                        } else {
-                            // First page
-                            q = query(
-                                collection(db, 'orders'),
-                                orderBy('createdAt', 'desc'),
-                                limit(pageSize.value + 1)
-                            );
+                        // Reset pagination cursors when loading fresh (not paginating)
+                        if (direction === 'next' && !lastVisible.value) {
+                            pageCursors.value = [];
                         }
+                        
+                        const q = buildOrdersQuery(direction);
                         const snapshot = await getDocs(q);
                         const docs = snapshot.docs;
-                        hasNextPage.value = docs.length > pageSize.value;
+                        
                         const loadedOrders = docs.slice(0, pageSize.value).map(doc => {
                             const data = doc.data();
                             let itemsCount = 0;
@@ -901,15 +802,69 @@
                                 remarks: data.remarks
                             };
                         });
+                        
                         orders.value = loadedOrders;
-                        firstVisible.value = docs[0];
-                        lastVisible.value = docs[Math.min(pageSize.value - 1, docs.length - 1)];
-                        // Track cursors for going back
-                        if (direction === 'next') {
-                            pageCursors.value.push(docs[0]);
+                        
+                        if (docs.length > 0) {
+                            firstVisible.value = docs[0];
+                            lastVisible.value = docs[Math.min(pageSize.value - 1, docs.length - 1)];
+                            
+                            // Track cursors for going back
+                            if (direction === 'next') {
+                                pageCursors.value.push(docs[0]);
+                            }
+                            
+                            // Check if there are more results by prefetching the next page
+                            if (docs.length > pageSize.value) {
+                                // We already fetched more than pageSize, so there are more results
+                                hasNextPage.value = true;
+                            } else {
+                                // Check if there's a next page by querying one more document
+                                const lastDoc = docs[docs.length - 1];
+                                
+                                // Build a new query with the same filters but starting after the last doc
+                                let checkQuery = query(collection(db, 'orders'));
+                                
+                                // Apply the same filters as the original query
+                                if (selectedOutlet.value && selectedOutlet.value.trim()) {
+                                    checkQuery = query(checkQuery, where('outletId', '==', selectedOutlet.value));
+                                } else if (selectedPrefix.value && selectedPrefix.value.trim()) {
+                                    const prefix = selectedPrefix.value + '-';
+                                    checkQuery = query(checkQuery, 
+                                        where('outletId', '>=', prefix),
+                                        where('outletId', '<', prefix + '\uf8ff')
+                                    );
+                                }
+                                
+                                if (selectedStatus.value && selectedStatus.value.trim()) {
+                                    checkQuery = query(checkQuery, where('status', '==', selectedStatus.value));
+                                }
+                                
+                                if (startDate.value && startDate.value.trim()) {
+                                    const start = new Date(startDate.value);
+                                    start.setHours(0, 0, 0, 0);
+                                    checkQuery = query(checkQuery, where('createdAt', '>=', Timestamp.fromDate(start)));
+                                }
+                                
+                                if (endDate.value && endDate.value.trim()) {
+                                    const end = new Date(endDate.value);
+                                    end.setHours(23, 59, 59, 999);
+                                    checkQuery = query(checkQuery, where('createdAt', '<=', Timestamp.fromDate(end)));
+                                }
+                                
+                                checkQuery = query(checkQuery, orderBy('createdAt', 'desc'), startAfter(lastDoc), limit(1));
+                                
+                                const nextPageSnapshot = await getDocs(checkQuery);
+                                hasNextPage.value = !nextPageSnapshot.empty;
+                            }
+                        } else {
+                            firstVisible.value = null;
+                            lastVisible.value = null;
+                            hasNextPage.value = false;
                         }
                     } catch (error) {
                         console.error('Error loading orders:', error);
+                        message.value = { type: 'error', text: 'Failed to load orders: ' + error.message };
                     } finally {
                         isLoading.value = false;
                     }
@@ -1280,60 +1235,32 @@
                 
                 // Reset filters
                 const resetFilters = () => {
-                    searchQuery.value = '';
                     selectedPrefix.value = '';
                     selectedOutlet.value = '';
                     selectedStatus.value = '';
                     startDate.value = '';
                     endDate.value = '';
-                    filteredCurrentPage.value = 1;
+                    currentPage.value = 1;
+                    loadOrders(); // Reload with no filters
                 };
                 
-                // Reset filtered pagination when filters change
-                watch([searchQuery, selectedPrefix, selectedOutlet, selectedStatus, startDate, endDate], () => {
-                    filteredCurrentPage.value = 1;
+                // Reload data when filters change
+                watch([selectedPrefix, selectedOutlet, selectedStatus, startDate, endDate], () => {
+                    currentPage.value = 1;
+                    lastVisible.value = null; // Reset pagination
+                    loadOrders();
                 });
                 
-                // Watch for when filters are completely cleared to ensure proper pagination mode
-                watch(hasActiveFilters, (newValue, oldValue) => {
-                    if (oldValue && !newValue) {
-                        // Filters were just cleared - reset to show all loaded orders
-                        filteredCurrentPage.value = 1;
-                    }
-                });
-                
-                // Pagination navigation - handles both filtered and unfiltered cases
+                // Simplified pagination navigation (server-side only)
                 const goToNextPage = async () => {
-                    if (hasActiveFilters.value) {
-                        // Client-side pagination for filtered results
-                        if (filteredHasNextPage.value) {
-                            filteredCurrentPage.value++;
-                        }
-                        
-                        // Auto-load more data if we're near the end and there might be more
-                        const remainingFilteredPages = filteredTotalPages.value - filteredCurrentPage.value;
-                        if (remainingFilteredPages <= 1 && hasNextPage.value && !isLoading.value) {
-                            await loadOrders('next');
-                        }
-                    } else {
-                        // Firebase pagination for unfiltered results
-                        if (hasNextPage.value) {
-                            await loadNextPage();
-                        }
+                    if (hasNextPage.value) {
+                        await loadNextPage();
                     }
                 };
                 
                 const goToPrevPage = async () => {
-                    if (hasActiveFilters.value) {
-                        // Client-side pagination for filtered results
-                        if (filteredHasPrevPage.value) {
-                            filteredCurrentPage.value--;
-                        }
-                    } else {
-                        // Firebase pagination for unfiltered results
-                        if (currentPage.value > 1) {
-                            await loadPrevPage();
-                        }
+                    if (currentPage.value > 1) {
+                        await loadPrevPage();
                     }
                 };
                 
@@ -1366,7 +1293,6 @@
                     goBack,
                     orders,
                     isLoading,
-                    searchQuery,
                     startDate,
                     endDate,
                     outletPrefixes,
@@ -1374,12 +1300,7 @@
                     selectedPrefix,
                     selectedOutlet,
                     selectedStatus,
-                    filteredOrders,
-                    allFilteredOrders,
                     hasActiveFilters,
-                    showPaginationControls,
-                    canGoToPrevPage,
-                    canGoToNextPage,
                     showModal,
                     selectedOrder,
                     formatDate,
@@ -1393,17 +1314,11 @@
                     updatingStatus,
                     message,
                     resetFilters,
-                    // Filtered pagination
-                    filteredCurrentPage,
-                    filteredPageSize,
-                    filteredTotalPages,
-                    filteredHasNextPage,
-                    filteredHasPrevPage,
-                    goToNextPage,
-                    goToPrevPage,
-                    // Firebase pagination (kept for potential future use)
+                    // Server-side pagination
                     pageSize,
                     currentPage,
+                    goToNextPage,
+                    goToPrevPage,
                     loadNextPage,
                     loadPrevPage,
                     hasNextPage
