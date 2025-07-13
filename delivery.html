@@ -71,16 +71,10 @@
                                 unit: item.unit,
                                 unitChinese: item.unitChinese,
                                 UOM: item.UOM,
-                                totalQuantity: 0,
-                                orders: []
+                                totalQuantity: 0
                             };
                         }
                         grouped[key].totalQuantity += item.quantity;
-                        grouped[key].orders.push({
-                            orderId: item.orderId,
-                            outletName: item.outletName,
-                            quantity: item.quantity
-                        });
                     });
                     return Object.values(grouped).sort((a, b) => a.name.localeCompare(b.name));
                 },
@@ -109,12 +103,9 @@
                             itemName: 'Item Name',
                             unit: 'Unit',
                             quantity: 'Quantity',
-                            orders: 'Orders',
-                            outlet: 'Outlet',
                             date: 'Date',
                             deliveryDate: 'Delivery Date',
                             refresh: 'Refresh',
-                            print: 'Print',
                             export: 'Export to PDF'
                         },
                         zh: {
@@ -127,12 +118,9 @@
                             itemName: '物品名称',
                             unit: '单位',
                             quantity: '数量',
-                            orders: '订单',
-                            outlet: '门店',
                             date: '日期',
                             deliveryDate: '配送日期',
                             refresh: '刷新',
-                            print: '打印',
                             export: '导出PDF'
                         }
                     };
@@ -240,9 +228,7 @@
                 
 
                 
-                printPage() {
-                    window.print();
-                },
+
                 
                 exportToPDF() {
                     // Simple PDF export using browser print
@@ -278,7 +264,6 @@
                                             <th>Item Name</th>
                                             <th>Unit</th>
                                             <th>Quantity</th>
-                                            <th>Orders</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -287,7 +272,6 @@
                                                 <td>${item.name}</td>
                                                 <td>${item.unit || item.unitChinese || item.UOM || ''}</td>
                                                 <td>${item.totalQuantity}</td>
-                                                <td>${item.orders.map(o => o.orderId).join(', ')}</td>
                                             </tr>
                                         `).join('')}
                                     </tbody>
@@ -344,7 +328,10 @@
         <div class="app-loading-text">Loading...</div>
     </div>
 
-    <div id="app">
+    <div id="app">w
+        <div style="background: red; padding: 20px; color: white;">
+            <h1>TEST - If you see this, Vue is working</h1>
+        </div>
         <header>
             <div class="header-content">
                 <div class="logo">
@@ -426,13 +413,6 @@
                             </svg>
                             {{ t('refresh') }}
                         </button>
-                        <button class="btn btn-secondary" @click="printPage">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
-                                <path d="M5 1a2 2 0 0 0-2 2v1h10V3a2 2 0 0 0-2-2H5zm6 8H5a1 1 0 0 0-1 1v3a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1z"/>
-                                <path d="M0 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V7zm2-1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H2z"/>
-                            </svg>
-                            {{ t('print') }}
-                        </button>
                         <button class="btn btn-secondary" @click="exportToPDF">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
                                 <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
@@ -451,31 +431,25 @@
                     {{ t('noItemsFound') }}
                 </div>
                 
-                <div v-else class="delivery-items">
-                    <div v-for="item in groupedItems" :key="`${item.name}_${item.unit}`" class="delivery-item-card">
-                        <div class="item-header">
-                            <h3 class="item-name">{{ item.name }}</h3>
-                            <div class="item-unit">{{ item.unit || item.unitChinese || item.UOM || '' }}</div>
-                        </div>
-                        <div class="item-body">
-                            <div class="quantity-section">
-                                <div class="total-quantity">
-                                    <span class="quantity-label">Total Quantity:</span>
-                                    <span class="quantity-value">{{ item.totalQuantity }}</span>
-                                </div>
-                            </div>
-                            <div class="orders-section">
-                                <h4>Orders:</h4>
-                                <div class="orders-list">
-                                    <div v-for="order in item.orders" :key="order.orderId" class="order-item">
-                                        <span class="order-id">{{ order.orderId }}</span>
-                                        <span class="outlet-name">({{ order.outletName }})</span>
-                                        <span class="order-quantity">- {{ order.quantity }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div v-else class="delivery-table-container">
+                    <table class="delivery-table">
+                        <thead>
+                            <tr>
+                                <th>{{ t('itemName') }}</th>
+                                <th>中文名称</th>
+                                <th>{{ t('unit') }}</th>
+                                <th>{{ t('quantity') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in groupedItems" :key="`${item.name}_${item.unit}`">
+                                <td class="item-name">{{ item.name }}</td>
+                                <td class="item-chinese">{{ item.chinese || item.unitChinese || '' }}</td>
+                                <td class="item-unit">{{ item.unit || item.unitChinese || item.UOM || '' }}</td>
+                                <td class="item-quantity">{{ item.totalQuantity }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             
@@ -573,35 +547,46 @@
             flex-wrap: wrap;
         }
         
-        .delivery-items {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-            gap: 20px;
+        .delivery-table-container {
             margin-top: 20px;
-        }
-        
-        .delivery-item-card {
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            padding: 20px;
-            border: 1px solid rgba(0, 0, 0, 0.05);
+            overflow: hidden;
         }
         
-        .item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
+        .delivery-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .delivery-table th {
+            background-color: #1a3c6e;
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .delivery-table td {
+            padding: 12px;
             border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+        
+        .delivery-table tr:hover {
+            background-color: #f8f9fa;
         }
         
         .item-name {
-            font-size: 1.2rem;
             font-weight: 600;
             color: #1a3c6e;
-            margin: 0;
+        }
+        
+        .item-chinese {
+            color: #666;
+            font-style: italic;
         }
         
         .item-unit {
@@ -610,69 +595,16 @@
             border-radius: 4px;
             font-size: 0.9rem;
             color: #666;
+            display: inline-block;
         }
         
-        .quantity-section {
-            margin-bottom: 15px;
-        }
-        
-        .total-quantity {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: #f8f9fa;
-            padding: 10px 15px;
-            border-radius: 6px;
-        }
-        
-        .quantity-label {
-            font-weight: 600;
-            color: #333;
-        }
-        
-        .quantity-value {
-            font-size: 1.3rem;
+        .item-quantity {
             font-weight: 700;
-            color: #1a3c6e;
-        }
-        
-        .orders-section h4 {
-            margin-bottom: 10px;
-            color: #666;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .orders-list {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        
-        .order-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 5px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 0.9rem;
-        }
-        
-        .order-id {
-            font-weight: 600;
-            color: #1a3c6e;
-        }
-        
-        .outlet-name {
-            color: #666;
-            font-style: italic;
-        }
-        
-        .order-quantity {
-            font-weight: 600;
             color: #28a745;
+            font-size: 1.1rem;
         }
+        
+
         
         @media (max-width: 768px) {
             .summary-header {
