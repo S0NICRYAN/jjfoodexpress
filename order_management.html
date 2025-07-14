@@ -1187,27 +1187,83 @@
                 const exportPDFChinese = async () => {
                     if (!selectedOrder.value) return;
                     try {
-                        const { jsPDF } = window.jspdf;
-                        const doc = new jsPDF('p', 'mm', 'a4');
-                        doc.addFileToVFS('SimSun-normal.ttf', window.SimSun);
-                        doc.addFont('SimSun-normal.ttf', 'SimSun', 'normal');
-                        doc.setFont('SimSun');
-                        doc.setFontSize(18);
-                        doc.text('测试中文PDF导出', 20, 30);
-                        doc.setFontSize(14);
-                        doc.text('订单编号：' + (selectedOrder.value.orderId || ''), 20, 50);
-                        doc.text('门店名称：' + (selectedOrder.value.outletName || ''), 20, 60);
-                        doc.text('商品明细：', 20, 75);
-                        let y = 85;
-                        (selectedOrder.value.items || []).forEach((item, idx) => {
-                            doc.text(`${idx + 1}. ${item.name || ''}  数量: ${item.quantity || ''}  单位: ${item.UOM || item.unitChinese || item.unit || ''}`, 25, y);
-                            y += 10;
-                        });
-                        doc.text('备注：' + (selectedOrder.value.remarks || ''), 20, y + 10);
-                        // Instead of download, open in new window for preview
-                        const pdfBlob = doc.output('blob');
-                        const pdfUrl = URL.createObjectURL(pdfBlob);
-                        window.open(pdfUrl, '_blank');
+                        const order = selectedOrder.value;
+                        const printWindow = window.open('', '_blank');
+                        // Prepare order items HTML
+                        const itemsHtml = (order.items || []).map((item, idx) =>
+                            `<tr>
+                                <td>${idx + 1}</td>
+                                <td>${item.name || ''}</td>
+                                <td>${item.quantity || ''}</td>
+                                <td>${item.UOM || item.unitChinese || item.unit || ''}</td>
+                                <td>${item.price ? item.price.toFixed(2) : ''}</td>
+                                <td>${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>
+                            </tr>`
+                        ).join('');
+                        printWindow.document.write(`
+                            <html lang="zh-CN">
+                                <head>
+                                    <meta charset="UTF-8">
+                                    <title>订单发票 - ${order.orderId || ''}</title>
+                                    <style>
+                                        body { font-family: 'SimSun', 'Arial', sans-serif; margin: 20px; }
+                                        .header { text-align: center; margin-bottom: 30px; }
+                                        .summary { margin-bottom: 20px; }
+                                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                        th { background-color: #f2f2f2; }
+                                        .totals { margin-top: 20px; font-weight: bold; }
+                                    </style>
+                                </head>
+                                <body>
+                                    <div class="header">
+                                        <h1>SHIAWASE (S) PTE LTD</h1>
+                                        <h2>订单发票</h2>
+                                        <p>订单编号：${order.orderId || ''}</p>
+                                        <p>门店名称：${order.outletName || ''}</p>
+                                        <p>门店地址：${order.outletAddress || ''}</p>
+                                    </div>
+                                    <div class="summary">
+                                        <p><strong>下单日期：</strong> ${order.createdAt ? formatDateTime(order.createdAt) : ''}</p>
+                                        <p><strong>送货日期：</strong> ${order.deliveryDate || ''}</p>
+                                    </div>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>序号</th>
+                                                <th>产品名称</th>
+                                                <th>数量</th>
+                                                <th>单位</th>
+                                                <th>单价</th>
+                                                <th>小计</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${itemsHtml}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <td colspan="5" style="text-align: right; font-weight: bold;">小计：</td>
+                                                <td style="font-weight: bold;">${order.subTotal ? order.subTotal.toFixed(2) : '0.00'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="5" style="text-align: right; font-weight: bold;">消费税 (9%)：</td>
+                                                <td style="font-weight: bold;">${order.subTotal ? (order.subTotal * 0.09).toFixed(2) : '0.00'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="5" style="text-align: right; font-weight: bold; font-size: 1.1em;">总计：</td>
+                                                <td style="font-weight: bold; font-size: 1.1em;">${order.grandTotal ? order.grandTotal.toFixed(2) : '0.00'}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                    <div class="summary">
+                                        <p><strong>备注：</strong> ${order.remarks || ''}</p>
+                                    </div>
+                                </body>
+                            </html>
+                        `);
+                        printWindow.document.close();
+                        printWindow.print();
                     } catch (error) {
                         alert('Failed to generate Chinese PDF: ' + error.message);
                     }
