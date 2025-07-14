@@ -592,6 +592,20 @@
                         </div>
                     </a>
 
+                    <!-- Daily Delivery -->
+                    <a href="delivery_loading.html" class="menu-item">
+                        <div class="menu-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M3 17V6a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v11h1.382a2 2 0 0 1 1.789 1.106l1.447 2.894A1 1 0 0 1 19.618 22H18a2 2 0 1 1-4 0H8a2 2 0 1 1-4 0H2a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1zm2 0h10V7H5v10zm12.618 2l-1.447-2.894A1 1 0 0 0 15.382 16H4.618a1 1 0 0 0-.894.553L2.276 19H3a2 2 0 1 1 4 0h8a2 2 0 1 1 4 0h.724l-1.106-2.106A1 1 0 0 0 19.618 19z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-content">
+                            <h3 class="menu-title">Daily Delivery</h3>
+                            <p class="menu-description">View and export daily delivery loading sheet.</p>
+                            <span class="btn btn-primary">Enter</span>
+                        </div>
+                    </a>
+
                     <!-- Statement of Account -->
                     <a href="#" class="menu-item" @click.prevent="goToPage('soa')">
                         <div class="menu-icon">
@@ -603,6 +617,20 @@
                         <div class="menu-content">
                             <h3 class="menu-title">{{ t('statementOfAccount') }}</h3>
                             <p class="menu-description">{{ t('statementOfAccountDesc') }}</p>
+                            <span class="btn btn-primary">{{ t('enter') }}</span>
+                        </div>
+                    </a>
+
+                    <!-- Delivery Loading -->
+                    <a href="#" class="menu-item" @click.prevent="goToPage('delivery')">
+                        <div class="menu-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-content">
+                            <h3 class="menu-title">{{ t('deliveryLoading') }}</h3>
+                            <p class="menu-description">{{ t('deliveryLoadingDesc') }}</p>
                             <span class="btn btn-primary">{{ t('enter') }}</span>
                         </div>
                     </a>
@@ -736,6 +764,14 @@
                     documents: {
                         zh: '文档',
                         en: 'Documents'
+                    },
+                    deliveryLoading: {
+                        zh: '配送装货',
+                        en: 'Delivery Loading'
+                    },
+                    deliveryLoadingDesc: {
+                        zh: '查看配送物品清单',
+                        en: 'View delivery items for loading'
                     }
                 };
                 
@@ -799,6 +835,8 @@
                         window.location.href = 'outlet_management.html';
                     } else if (page === 'soa') {
                         window.location.href = 'soa.html';
+                    } else if (page === 'delivery') {
+                        window.location.href = 'delivery_loading.html';
                     }
                 };
                 
