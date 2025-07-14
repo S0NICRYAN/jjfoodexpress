@@ -468,6 +468,13 @@
                         </svg>
                         {{ t('downloadInvoice') }}
                     </button>
+                    <button class="btn btn-pdf" @click="exportPDFChinese">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                        </svg>
+                        测试中文PDF
+                    </button>
                     <button v-if="selectedOrder?.status?.toLowerCase() === 'cancelled'" class="btn btn-primary" @click="updateOrderStatus(selectedOrder, 'pending')" :disabled="updatingStatus">
                         {{ updatingStatus ? t('updating') : t('undoCancellation') }}
                     </button>
@@ -1176,6 +1183,35 @@
                         alert('Failed to generate PDF: ' + error.message);
                     }
                 };
+                // Add exportPDFChinese for testing Chinese PDF rendering
+                const exportPDFChinese = async () => {
+                    if (!selectedOrder.value) return;
+                    try {
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF('p', 'mm', 'a4');
+                        doc.addFileToVFS('SimSun-normal.ttf', window.SimSun);
+                        doc.addFont('SimSun-normal.ttf', 'SimSun', 'normal');
+                        doc.setFont('SimSun');
+                        doc.setFontSize(18);
+                        doc.text('测试中文PDF导出', 20, 30);
+                        doc.setFontSize(14);
+                        doc.text('订单编号：' + (selectedOrder.value.orderId || ''), 20, 50);
+                        doc.text('门店名称：' + (selectedOrder.value.outletName || ''), 20, 60);
+                        doc.text('商品明细：', 20, 75);
+                        let y = 85;
+                        (selectedOrder.value.items || []).forEach((item, idx) => {
+                            doc.text(`${idx + 1}. ${item.name || ''}  数量: ${item.quantity || ''}  单位: ${item.UOM || item.unitChinese || item.unit || ''}`, 25, y);
+                            y += 10;
+                        });
+                        doc.text('备注：' + (selectedOrder.value.remarks || ''), 20, y + 10);
+                        // Instead of download, open in new window for preview
+                        const pdfBlob = doc.output('blob');
+                        const pdfUrl = URL.createObjectURL(pdfBlob);
+                        window.open(pdfUrl, '_blank');
+                    } catch (error) {
+                        alert('Failed to generate Chinese PDF: ' + error.message);
+                    }
+                };
                 // Update order status
                 const updateOrderStatus = async (order, newStatus) => {
                     // If cancelling, show confirmation dialog
@@ -1347,7 +1383,8 @@
                     hasNextPage,
                     // Date handlers
                     handleStartDateChange,
-                    handleEndDateChange
+                    handleEndDateChange,
+                    exportPDFChinese
                 };
             }
         }).mount('#app');
