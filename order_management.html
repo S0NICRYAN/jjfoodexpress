@@ -1001,16 +1001,33 @@
                             }
                         });
                         const itemsArr = Object.values(combinedItems);
-                        const itemsHtml = itemsArr.length > 0 ? itemsArr.map((item, idx) =>
-                            `<tr>
-                                <td style="width:${colWidths[0]}px;text-align:center;">${idx + 1}</td>
-                                <td style="width:${colWidths[1]}px;">${item.chinese || item.name || ''}</td>
-                                <td style="width:${colWidths[2]}px;text-align:right;">${item.quantity || ''}</td>
-                                <td style="width:${colWidths[3]}px;">${item.UOM || item.unit || ''}</td>
-                                <td style="width:${colWidths[4]}px;text-align:right;">${item.price ? item.price.toFixed(2) : ''}</td>
-                                <td style="width:${colWidths[5]}px;text-align:right;">${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>
-                            </tr>`
-                        ).join('') : `<tr><td colspan="6" style="text-align:center;">No items found.</td></tr>`;
+                        const tableHtml = `<table style='width:100%;border-collapse:collapse;margin-top:20px;'>`
+                            + `<thead><tr>`
+                            + `<th style='width:${colWidths[0]}px;'>S/N</th>`
+                            + `<th style='width:${colWidths[1]}px;'>Product Name</th>`
+                            + `<th style='width:${colWidths[2]}px;'>Quantity</th>`
+                            + `<th style='width:${colWidths[3]}px;'>Unit</th>`
+                            + `<th style='width:${colWidths[4]}px;'>Price</th>`
+                            + `<th style='width:${colWidths[5]}px;'>Subtotal</th>`
+                            + `</tr></thead>`
+                            + `<tbody>`
+                            + (itemsArr.length > 0 ? itemsArr.map((item, idx) =>
+                                `<tr>`+
+                                `<td style='width:${colWidths[0]}px;text-align:center;'>${idx + 1}</td>`+
+                                `<td style='width:${colWidths[1]}px;'>${item.chinese || item.name || ''}</td>`+
+                                `<td style='width:${colWidths[2]}px;text-align:right;'>${item.quantity || ''}</td>`+
+                                `<td style='width:${colWidths[3]}px;'>${item.UOM || item.unit || ''}</td>`+
+                                `<td style='width:${colWidths[4]}px;text-align:right;'>${item.price ? item.price.toFixed(2) : ''}</td>`+
+                                `<td style='width:${colWidths[5]}px;text-align:right;'>${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>`+
+                                `</tr>`
+                            ).join('') : `<tr><td colspan='6' style='text-align:center;'>No items found.</td></tr>`)
+                            + `</tbody>`
+                            + `<tfoot>`
+                            + `<tr><td colspan='5' style='text-align: right; font-weight: bold;'>TOTAL</td><td style='font-weight: bold;'>${totalSubtotal.toFixed(2)}</td></tr>`
+                            + `<tr><td colspan='5' style='text-align: right; font-weight: bold;'>ADD GST @9%</td><td style='font-weight: bold;'>${(totalSubtotal * 0.09).toFixed(2)}</td></tr>`
+                            + `<tr><td colspan='5' style='text-align: right; font-weight: bold; font-size: 1.1em;'>TOTAL DUE IN S$</td><td style='font-weight: bold; font-size: 1.1em;'>${(totalSubtotal * 1.09).toFixed(2)}</td></tr>`
+                            + `</tfoot>`
+                            + `</table>`;
                         const printWindow = window.open('', '_blank');
                         printWindow.document.write(`
                             <html lang="en">
@@ -1057,35 +1074,7 @@
                                             <div><span class="details-label">TEL :</span> (65) 6570 9171</div>
                                         </div>
                                     </div>
-                                    <table style='width:100%;border-collapse:collapse;margin-top:20px;'>
-                                        <thead>
-                                            <tr>
-                                                <th style='width:${colWidths[0]}px;'>S/N</th>
-                                                <th style='width:${colWidths[1]}px;'>Product Name</th>
-                                                <th style='width:${colWidths[2]}px;'>Quantity</th>
-                                                <th style='width:${colWidths[3]}px;'>Unit</th>
-                                                <th style='width:${colWidths[4]}px;'>Price</th>
-                                                <th style='width:${colWidths[5]}px;'>Subtotal</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            ${itemsHtml}
-                                        </tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <td colspan="5" style="text-align: right; font-weight: bold;">TOTAL</td>
-                                                <td style="font-weight: bold;">${totalSubtotal.toFixed(2)}</td>
-                                            </tr>
-                                            <tr>
-                                                <td colspan="5" style="text-align: right; font-weight: bold;">ADD GST @9%</td>
-                                                <td style="font-weight: bold;">${(totalSubtotal * 0.09).toFixed(2)}</td>
-                                            </tr>
-                                            <tr>
-                                                <td colspan="5" style="text-align: right; font-weight: bold; font-size: 1.1em;">TOTAL DUE IN S$</td>
-                                                <td style="font-weight: bold; font-size: 1.1em;">${(totalSubtotal * 1.09).toFixed(2)}</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
+                                    ${tableHtml}
                                     ${(order.remarks && order.remarks.trim() !== '') ? `<div class="summary"><p><strong>Remarks:</strong> ${order.remarks}</p></div>` : ''}
                                     <div class="signature-section" style="margin-top: 40px; display: flex; justify-content: space-between;">
                                         <div style="width: 48%;">
