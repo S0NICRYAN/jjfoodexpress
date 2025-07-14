@@ -468,13 +468,6 @@
                         </svg>
                         {{ t('downloadInvoice') }}
                     </button>
-                    <button class="btn btn-pdf" @click="exportPDFChinese">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 5px;">
-                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                        </svg>
-                        测试中文PDF
-                    </button>
                     <button v-if="selectedOrder?.status?.toLowerCase() === 'cancelled'" class="btn btn-primary" @click="updateOrderStatus(selectedOrder, 'pending')" :disabled="updatingStatus">
                         {{ updatingStatus ? t('updating') : t('undoCancellation') }}
                     </button>
@@ -922,284 +915,20 @@
                 // Download PDF with cutoff time logic
                 const downloadPDF = async () => {
                     if (!selectedOrder.value) return;
-                    
                     try {
                         const order = selectedOrder.value;
-                        const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
-                        const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes(); // Convert to minutes
-                        const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
-                        
-                        // Determine which date to use for invoice
-                        let invoiceDate = new Date(orderDate);
-                        if (orderTime > cutoffTime) {
-                            // If order is after 4:30 PM, use next day
-                            invoiceDate.setDate(invoiceDate.getDate() + 1);
-                        }
-                        
-                        // Calculate the start and end for the invoice window
-                        const invoiceStart = new Date(invoiceDate);
-                        invoiceStart.setDate(invoiceDate.getDate() - 1);
-                        invoiceStart.setHours(16, 30, 0, 0); // Previous day 16:30
-
-                        const invoiceEnd = new Date(invoiceDate);
-                        invoiceEnd.setHours(16, 30, 0, 0); // Invoice day 16:30
-
-                        // Fetch all orders for the same outlet in the invoice window
-                        const ordersRef = collection(db, 'orders');
-                        const q = query(
-                            ordersRef,
-                            where('outletId', '==', order.outletId),
-                            where('createdAt', '>', invoiceStart),
-                            where('createdAt', '<=', invoiceEnd),
-                            where('status', 'in', ['processing', 'delivered'])
-                        );
-                        
-                        const snapshot = await getDocs(q);
-                        const relatedOrders = [];
-                        
-                        snapshot.forEach(doc => {
-                            const data = doc.data();
-                            relatedOrders.push({
-                                id: doc.id,
-                                ...data,
-                                createdAt: data.createdAt
-                            });
-                        });
-
-                        // If no valid orders found, show message and return
-                        if (relatedOrders.length === 0) {
-                            alert('No valid orders found for this date. Only processing and delivered orders can be included in invoices.');
-                            return;
-                        }
-                        
-                        // Combine items from all orders
-                        const combinedItems = {};
-                        let totalSubtotal = 0;
-                        
-                        relatedOrders.forEach(order => {
-                            if (order.items) {
-                                Object.values(order.items).forEach(item => {
-                                    const key = `${item.name}_${item.unit}`;
-                                    if (!combinedItems[key]) {
-                                        combinedItems[key] = {
-                                            name: item.name,
-                                            UOM: item.UOM,
-                                            unit: item.unit,
-                                            unitChinese: item.unitChinese,
-                                            quantity: 0,
-                                            price: item.price,
-                                            subtotal: 0
-                                        };
-                                    }
-                                    combinedItems[key].quantity += item.quantity;
-                                    combinedItems[key].subtotal += item.subtotal;
-                                    totalSubtotal += item.subtotal;
-                                });
-                            }
-                        });
-                        
-                        // Generate PDF
-                        const { jsPDF } = window.jspdf;
-                        const doc = new jsPDF('p', 'mm', 'a4'); // Explicitly set page format
-                        let y = 20;
-                        
-                        // Company header
-                        doc.setFontSize(18);
-                        doc.text('SHIAWASE (S) PTE LTD', 105, y, { align: 'center' });
-                        y += 10;
-                        
-                        doc.setFontSize(10);
-                        doc.text('5 Mandai Link #09-06 Mandai Food Link Singapore 728654', 105, y, { align: 'center' });
-                        y += 6;
-                        doc.text('Tel: (65) 6570 9171', 105, y, { align: 'center' });
-                        y += 6;
-                        doc.text('GST REGISTRATION NO. 201015007Z', 105, y, { align: 'center' });
-                        y += 10;
-
-                        doc.setFontSize(12);
-                        doc.text('TAX INVOICE', 105, y, { align: 'center' });
-                        
-                        // Order information
-                        doc.setFontSize(10);
-                        y += 10;
-                        doc.text('DELIVER TO :', 20, y);
-                        y += 5;
-                        
-                        // Address
-                        const addressText = order.outletAddress || '';
-                        const addressLines = doc.splitTextToSize(addressText, 90);
-                        const addressStartY = y;
-                        addressLines.forEach(line => {
-                            doc.text(line, 20, y);
-                            y += 6;
-                        });
-                        
-                        // Prepare formatted date for invoice number
-                        const formattedDate = formatDate(invoiceDate).replace(/\//g, '');
-                        // Find the highest order ID from related orders (use part after dash)
-                        const numericOrderIds = relatedOrders
-                            .map(order => {
-                                // Use order.orderId if present, otherwise order.id
-                                const oid = order.orderId || order.id || '';
-                                if (oid) {
-                                    if (oid.includes('-')) {
-                                        const parts = oid.split('-');
-                                        const num = parseInt(parts[1], 10);
-                                        return !isNaN(num) ? num : null;
-                                    }
-                                    const num = parseInt(oid, 10);
-                                    return !isNaN(num) ? num : null;
-                                }
-                                return null;
-                            })
-                            .filter(num => num !== null);
-
-                        let invoiceNumberPrefix;
-                        if (numericOrderIds.length > 0) {
-                            invoiceNumberPrefix = Math.max(...numericOrderIds);
-                        } else if (relatedOrders.length > 0) {
-                            // Use the first order's orderId or id, removing any non-numeric characters
-                            const firstOrderId = relatedOrders[0].orderId || relatedOrders[0].id || '';
-                            const numericPart = firstOrderId.replace(/[^0-9]/g, '');
-                            invoiceNumberPrefix = numericPart || '0001';
-                        } else {
-                            invoiceNumberPrefix = '0001';
-                        }
-                        const invoiceNumber = `${invoiceNumberPrefix}/${formattedDate}`;
-                        
-                        doc.text(`DATE : ${formatDate(invoiceDate)}`, 140, addressStartY);
-                        doc.text(`INVOICE NO : ${invoiceNumber}`, 140, addressStartY + 6);
-                        doc.text(`Orders Included: ${relatedOrders.length}`, 140, addressStartY + 12);
-                        
-                        // Items table
-                        y += 15;
-                        doc.setFontSize(10);
-                        
-                        // Table headers
-                        const headers = ['S/N', 'DESCRIPTION', 'UOM', 'QTY', 'UNIT PRICE', 'AMOUNT'];
-                        const colWidths = [15, 55, 25, 20, 25, 30]; // Reduced DESCRIPTION width, increased AMOUNT width
-                        let x = 20;
-                        
-                        // Draw header background
-                        doc.setFillColor(240, 240, 240);
-                        doc.rect(20, y - 5, 170, 8, 'F');
-                        
-                        headers.forEach((header, i) => {
-                            doc.text(header, x, y);
-                            x += colWidths[i];
-                        });
-                        
-                        y += 8;
-                        
-                        // Table rows
-                        const items = Object.values(combinedItems);
-                        items.forEach((item, index) => {
-                            x = 20;
-                            
-                            if (y > 250) {
-                                doc.addPage();
-                                y = 20;
-                            }
-                            
-                            const uomValue = item.UOM || item.unitChinese || item.unit || '';
-                            
-                            // Convert Chinese characters to placeholder for now
-                            let itemName = item.name || '';
-                            if (/[\u4e00-\u9fff]/.test(itemName)) {
-                                itemName = `[Chinese: ${itemName.length} chars]`;
-                            }
-                            
-                            const rowData = [
-                                (index + 1).toString(),
-                                itemName,
-                                uomValue,
-                                (item.quantity || 0).toString(),
-                                `${(item.price || 0).toFixed(2)}`,
-                                `${(item.subtotal || 0).toFixed(2)}`
-                            ];
-                            
-                            rowData.forEach((data, i) => {
-                                const maxWidth = colWidths[i] - 2;
-                                const text = i === 1 ? doc.splitTextToSize(data, maxWidth)[0] : data;
-                                doc.text(text, x, y);
-                                x += colWidths[i];
-                            });
-                            
-                            y += 6;
-                        });
-                        
-                        // Totals
-                        y += 10;
-                        const totalsX = 95; // Moved left to give more space
-                        const amountX = 195; // Moved right to accommodate larger numbers
-                        
-                        // Format numbers with proper spacing for larger values
-                        const formatCurrency = (amount) => {
-                            return amount.toLocaleString('en-US', { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
-                            });
-                        };
-                        
-                        doc.text('TOTAL', totalsX, y);
-                        doc.text(formatCurrency(totalSubtotal), amountX, y, { align: 'right' });
-                        y += 6;
-                        
-                        doc.text('ADD GST@9%', totalsX, y);
-                        doc.text(formatCurrency(totalSubtotal * 0.09), amountX, y, { align: 'right' });
-                        y += 6;
-                        
-                        doc.setFontSize(12);
-                        doc.text('TOTAL DUE IN S$', totalsX, y);
-                        doc.text(formatCurrency(totalSubtotal * 1.09), amountX, y, { align: 'right' });
-                        
-                        // Signature section
-                        y += 20;
-                        doc.setFontSize(10);
-                        
-                        const leftColumnX = 20;
-                        const rightColumnX = 105;
-                        
-                        doc.text('ISSUED BY :', leftColumnX, y);
-                        doc.text('RECEIVED BY :', rightColumnX, y);
-                        
-                        y += 10;
-                        doc.text('Issuer: _________________', leftColumnX, y);
-                        doc.text('Receiver: _________________', rightColumnX, y);
-                        
-                        y += 12;
-                        doc.text('Prepared by: _________________', leftColumnX, y);
-                        
-                        // Order references
-                        y += 15;
-                        if (order.remarks && order.remarks.trim() !== '') {
-                            doc.text('Remarks:', 20, y);
-                            y += 6;
-                        }
-                        
-                        // Save PDF
-                        doc.save(`Invoice_${order.outletId}_${formatDate(invoiceDate).replace(/\//g, '')}.pdf`);
-                    } catch (error) {
-                        alert('Failed to generate PDF: ' + error.message);
-                    }
-                };
-                // Add exportPDFChinese for testing Chinese PDF rendering
-                const exportPDFChinese = async () => {
-                    if (!selectedOrder.value) return;
-                    try {
-                        const order = selectedOrder.value;
-                        const printWindow = window.open('', '_blank');
-                        // Prepare order items HTML
+                        // Prepare order items HTML with Chinese name and UOM/unit logic
                         const itemsHtml = (order.items || []).map((item, idx) =>
                             `<tr>
                                 <td>${idx + 1}</td>
-                                <td>${item.name || ''}</td>
+                                <td>${item.chinese || item.name || ''}</td>
                                 <td>${item.quantity || ''}</td>
-                                <td>${item.UOM || item.unitChinese || item.unit || ''}</td>
+                                <td>${item.UOM || item.unit || ''}</td>
                                 <td>${item.price ? item.price.toFixed(2) : ''}</td>
                                 <td>${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>
                             </tr>`
                         ).join('');
+                        const printWindow = window.open('', '_blank');
                         printWindow.document.write(`
                             <html lang="zh-CN">
                                 <head>
@@ -1265,7 +994,7 @@
                         printWindow.document.close();
                         printWindow.print();
                     } catch (error) {
-                        alert('Failed to generate Chinese PDF: ' + error.message);
+                        alert('Failed to generate PDF: ' + error.message);
                     }
                 };
                 // Update order status
@@ -1439,8 +1168,7 @@
                     hasNextPage,
                     // Date handlers
                     handleStartDateChange,
-                    handleEndDateChange,
-                    exportPDFChinese
+                    handleEndDateChange
                 };
             }
         }).mount('#app');
