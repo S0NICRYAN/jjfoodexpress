@@ -1022,11 +1022,17 @@
                                         .company-info { text-align: center; font-size: 14px; margin-bottom: 0; }
                                         .gst-info { text-align: center; font-size: 13px; margin-bottom: 10px; }
                                         .tax-invoice { text-align: center; font-size: 20px; font-weight: bold; margin: 20px 0 10px 0; }
-                                        .details-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-                                        .details-table td, .details-table th { border: 1px solid #000; padding: 4px 8px; font-size: 15px; }
-                                        .details-table th { background: #fff; font-weight: bold; }
-                                        .details-table .label { font-weight: bold; width: 120px; }
-                                        .details-table .value { font-weight: bold; }
+                                        .details-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+                                        .details-left { width: 60%; }
+                                        .details-right { width: 38%; text-align: right; }
+                                        .details-label { font-weight: bold; }
+                                        .details-address { margin-top: 8px; line-height: 1.4; }
+                                        .signature-section { margin-top: 40px; }
+                                        .signature-table { width: 100%; border-collapse: collapse; }
+                                        .signature-table td { border: 1px solid #000; padding: 6px 10px; font-size: 15px; vertical-align: top; }
+                                        .signature-label { font-weight: bold; }
+                                        .signature-line { display: inline-block; border-bottom: 1px solid #000; width: 120px; margin: 0 8px; }
+                                        .signature-chinese { font-family: 'SimSun', 'Arial', sans-serif; }
                                     </style>
                                 </head>
                                 <body>
@@ -1037,32 +1043,28 @@
                                     <div class="company-info">Tel: (65) 6570 9171</div>
                                     <div class="gst-info">GST REGISTRATION NO. 201015007Z</div>
                                     <div class="tax-invoice">TAX INVOICE</div>
-                                    <table class="details-table">
-                                        <tr>
-                                            <td rowspan="${addressLines.length + 2}" style="vertical-align: top; width: 320px;">
-                                                <div><span class="label">DELIVER TO :</span> ${order.outletName ? `<span>${order.outletName}</span>` : ''}${order.outletChinese ? ` <span>${order.outletChinese}</span>` : ''}</div>
-                                                ${addressLines.map(line => `<div>${line}</div>`).join('')}
-                                            </td>
-                                            <td class="label" style="width: 120px;">DATE :</td>
-                                            <td style="width: 120px;">${pad(invoiceDate.getDate())}/${pad(invoiceDate.getMonth() + 1)}/${invoiceDate.getFullYear()}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="label">INVOICE NO :</td>
-                                            <td>${invoiceNumber}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="label">TEL :</td>
-                                        </tr>
-                                    </table>
+                                    <div class="details-row">
+                                        <div class="details-left">
+                                            <div class="details-label">DELIVER TO:${order.outletName ? ' ' + order.outletName : ''}${order.outletChinese ? ' ' + order.outletChinese : ''}</div>
+                                            <div class="details-address">
+                                                ${(addressLines).map(line => `<div>${line}</div>`).join('')}
+                                            </div>
+                                        </div>
+                                        <div class="details-right">
+                                            <div><span class="details-label">DATE :</span> ${pad(invoiceDate.getDate())}/${pad(invoiceDate.getMonth() + 1)}/${invoiceDate.getFullYear()}</div>
+                                            <div><span class="details-label">INVOICE NO :</span> ${invoiceNumber}</div>
+                                            <div><span class="details-label">TEL :</span> (65) 6570 9171</div>
+                                        </div>
+                                    </div>
                                     <table>
                                         <thead>
                                             <tr>
                                                 <th style="width:${colWidths[0]}px;">S/N</th>
-                                                <th style="width:${colWidths[1]}px;">DESCRIPTION</th>
-                                                <th style="width:${colWidths[2]}px;">QTY</th>
-                                                <th style="width:${colWidths[3]}px;">UOM</th>
-                                                <th style="width:${colWidths[4]}px;">UNIT PRICE</th>
-                                                <th style="width:${colWidths[5]}px;">AMOUNT</th>
+                                                <th style="width:${colWidths[1]}px;">Product Name</th>
+                                                <th style="width:${colWidths[2]}px;">Quantity</th>
+                                                <th style="width:${colWidths[3]}px;">Unit</th>
+                                                <th style="width:${colWidths[4]}px;">Price</th>
+                                                <th style="width:${colWidths[5]}px;">Subtotal</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1083,8 +1085,22 @@
                                             </tr>
                                         </tfoot>
                                     </table>
-                                    <div class="summary">
-                                        <p><strong>Remarks:</strong> ${order.remarks || ''}</p>
+                                    ${(order.remarks && order.remarks.trim() !== '') ? `<div class="summary"><p><strong>Remarks:</strong> ${order.remarks}</p></div>` : ''}
+                                    <div class="signature-section">
+                                        <table class="signature-table">
+                                            <tr>
+                                                <td style="width:50%;"><span class="signature-label">ISSUED BY :</span></td>
+                                                <td style="width:50%;"><span class="signature-label">RECEIVED BY :</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="signature-chinese">开单者</span> <span class="signature-line"></span></td>
+                                                <td><span class="signature-chinese">收货人</span> <span class="signature-line"></span></td>
+                                            </tr>
+                                            <tr>
+                                                <td><span class="signature-chinese">备货者</span> <span class="signature-line"></span></td>
+                                                <td></td>
+                                            </tr>
+                                        </table>
                                     </div>
                                 </body>
                             </html>
