@@ -136,16 +136,17 @@
                 
                 toggleLanguage() {
                     this.currentLang = this.currentLang === 'en' ? 'zh' : 'en';
+                    localStorage.setItem('preferred_language', this.currentLang);
                 },
                 
                 goBack() {
-                    window.history.back();
+                    window.location.href = 'index.html';
                 },
                 
                 async loadDeliveryItems() {
                     this.isLoading = true;
                     this.message = { text: '', type: '' };
-                    
+
                     try {
                         console.log('Loading delivery items for date:', this.deliveryDate);
                         const deliveryDate = new Date(this.deliveryDate);
@@ -310,6 +311,12 @@
             
             async mounted() {
                 console.log('Component mounted, checking authentication...');
+                
+                // Load saved language preference
+                const savedLang = localStorage.getItem('preferred_language');
+                if (savedLang && (savedLang === 'zh' || savedLang === 'en')) {
+                    this.currentLang = savedLang;
+                }
                 
                 // Show the app immediately for debugging
                 document.getElementById('app').classList.add('loaded');
