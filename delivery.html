@@ -251,7 +251,7 @@
                     printWindow.document.write(`
                         <html>
                             <head>
-                                <title>Delivery Loading - ${deliveryDateDisplay}</title>
+                                <title>${isZh ? '配送装货单' : 'Delivery Loading'} - ${deliveryDateDisplay}</title>
                                 <style>
                                     body { font-family: Arial, sans-serif; margin: 20px; }
                                     .header { text-align: center; margin-bottom: 30px; }
@@ -265,13 +265,13 @@
                             <body>
                                 <div class="header">
                                     <h1>SHIAWASE (S) PTE LTD</h1>
-                                    <h2>Delivery Loading Sheet</h2>
-                                    <p>Date: ${deliveryDateDisplay}</p>
+                                    <h2>${isZh ? '配送装货单' : 'Delivery Loading Sheet'}</h2>
+                                    <p>${isZh ? '日期' : 'Date'}: ${deliveryDateDisplay}</p>
                                 </div>
                                 <div class="summary">
-                                    <p><strong>Total Items:</strong> ${this.totalUniqueItems}</p>
-                                    <p><strong>Total Orders:</strong> ${this.totalOrders}</p>
-                                    <p><strong>Total Quantity:</strong> ${this.totalItems}</p>
+                                    <p><strong>${isZh ? '总物品数' : 'Total Items'}:</strong> ${this.totalUniqueItems}</p>
+                                    <p><strong>${isZh ? '总订单数' : 'Total Orders'}:</strong> ${this.totalOrders}</p>
+                                    <p><strong>${isZh ? '总数量' : 'Total Quantity'}:</strong> ${this.totalItems}</p>
                                 </div>
                                 <table>
                                     <thead>
