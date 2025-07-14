@@ -497,7 +497,7 @@
         <div class="page" :class="{ 'active': currentPage === 'dashboard' }">
             <header>
                 <div class="header-content">
-                    <div class="logo">
+                    <div class="logo" @click="goToIndex" style="cursor: pointer;">
                         <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
                     </div>
                     <div class="header-user">
@@ -600,9 +600,9 @@
                             </svg>
                         </div>
                         <div class="menu-content">
-                            <h3 class="menu-title">Daily Delivery</h3>
-                            <p class="menu-description">View and export daily delivery loading sheet.</p>
-                            <span class="btn btn-primary">Enter</span>
+                            <h3 class="menu-title">{{ t('dailyDelivery') }}</h3>
+                            <p class="menu-description">{{ t('dailyDeliveryDesc') }}</p>
+                            <span class="btn btn-primary">{{ t('enter') }}</span>
                         </div>
                     </a>
 
@@ -753,6 +753,14 @@
                         zh: '文档',
                         en: 'Documents'
                     },
+                    dailyDelivery: {
+                        zh: '每日配送',
+                        en: 'Daily Delivery'
+                    },
+                    dailyDeliveryDesc: {
+                        zh: '查看和导出每日配送装货单',
+                        en: 'View and export daily delivery loading sheet'
+                    },
 
                 };
                 
@@ -819,6 +827,11 @@
                     }
                 };
                 
+                // Go to index function
+                const goToIndex = () => {
+                    window.location.href = 'index.html';
+                };
+                
                 // Check authentication state on load
                 onMounted(() => {
                     // Load saved language preference
@@ -862,6 +875,7 @@
                     login,
                     logout,
                     goToPage,
+                    goToIndex,
                     toggleLanguage
                 };
             }
