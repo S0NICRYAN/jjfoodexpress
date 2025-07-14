@@ -151,14 +151,15 @@
                         // Calculate the date range based on the selected delivery date
                         const deliveryDate = new Date(this.deliveryDate);
                         
-                        // Previous day after 4:30 PM
-                        const previousDayAfter430 = new Date(deliveryDate);
-                        previousDayAfter430.setDate(deliveryDate.getDate() - 1);
-                        previousDayAfter430.setHours(16, 30, 0, 0);
+                        // Start: 2 days prior after 4:30 PM
+                        const startDate = new Date(deliveryDate);
+                        startDate.setDate(deliveryDate.getDate() - 2);
+                        startDate.setHours(16, 30, 0, 0);
                         
-                        // Current day before 4:30 PM
-                        const currentDayBefore430 = new Date(deliveryDate);
-                        currentDayBefore430.setHours(16, 30, 0, 0);
+                        // End: End of the day prior to delivery date
+                        const endDate = new Date(deliveryDate);
+                        endDate.setDate(deliveryDate.getDate() - 1);
+                        endDate.setHours(23, 59, 59, 999);
                         
                         const ordersRef = collection(db, 'orders');
                         
@@ -179,22 +180,12 @@
                             const data = doc.data();
                             const orderTime = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
                             const orderDate = new Date(orderTime);
-                            const deliveryDateObj = new Date(deliveryDate);
-                            const previousDay = new Date(deliveryDate);
-                            previousDay.setDate(previousDay.getDate() - 1);
                             
                             // Check if order qualifies for delivery
                             let shouldInclude = false;
                             
-                            // Previous day after 4:30 PM
-                            if (orderDate.toDateString() === previousDay.toDateString() && 
-                                (orderTime.getHours() > 16 || (orderTime.getHours() === 16 && orderTime.getMinutes() >= 30))) {
-                                shouldInclude = true;
-                            }
-                            
-                            // Current day before 4:30 PM
-                            if (orderDate.toDateString() === deliveryDateObj.toDateString() && 
-                                (orderTime.getHours() < 16 || (orderTime.getHours() === 16 && orderTime.getMinutes() < 30))) {
+                            // Check if order is within the date range
+                            if (orderDate >= startDate && orderDate <= endDate) {
                                 shouldInclude = true;
                             }
                             
@@ -386,7 +377,7 @@
                             <div class="date-picker-container">
                                 <input type="date" v-model="deliveryDate" class="form-control date-picker" @change="loadDeliveryItems">
                                 <div class="date-range-info">
-                                    <small>Orders: Previous day after 4:30 PM + Current day before 4:30 PM</small>
+                                    <small>Orders: 2 days prior after 4:30 PM + Whole day prior to delivery date</small>
                                 </div>
                             </div>
                         </div>
