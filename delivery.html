@@ -328,10 +328,7 @@
         <div class="app-loading-text">Loading...</div>
     </div>
 
-    <div id="app">w
-        <div style="background: red; padding: 20px; color: white;">
-            <h1>TEST - If you see this, Vue is working</h1>
-        </div>
+    <div id="app">
         <header>
             <div class="header-content">
                 <div class="logo">
@@ -444,7 +441,7 @@
                         <tbody>
                             <tr v-for="item in groupedItems" :key="`${item.name}_${item.unit}`">
                                 <td class="item-name">{{ item.name }}</td>
-                                <td class="item-chinese">{{ item.chinese || item.unitChinese || '' }}</td>
+                                <td class="item-chinese">{{ item.chinese || '' }}</td>
                                 <td class="item-unit">{{ item.unit || item.unitChinese || item.UOM || '' }}</td>
                                 <td class="item-quantity">{{ item.totalQuantity }}</td>
                             </tr>
