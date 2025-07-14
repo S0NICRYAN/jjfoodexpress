@@ -162,64 +162,42 @@
                             return;
                         }
 
-                        // Find two previous non-Sunday days
-                        let daysFound = 0;
-                        let tempDate = new Date(deliveryDate);
-                        let prevDates = [];
-                        while (daysFound < 2) {
-                            tempDate.setDate(tempDate.getDate() - 1);
-                            if (tempDate.getDay() !== 0) { // Not Sunday
-                                prevDates.unshift(new Date(tempDate)); // Add to start of array
-                                daysFound++;
-                            }
-                        }
-                        // prevDates[0]: two non-Sunday days before delivery date
-                        // prevDates[1]: one non-Sunday day before delivery date
-
-                        // Set window:
-                        // Start: two non-Sunday days before, at 4:30 PM (orders after 4:30 PM)
-                        // End: one non-Sunday day before, at 11:59:59 PM
-                        const startDate = new Date(prevDates[0]);
-                        startDate.setHours(16, 30, 0, 0); // 4:30 PM
-                        const endDate = new Date(prevDates[1]);
-                        endDate.setHours(23, 59, 59, 999); // End of day
-
-                        // Debug log for window
-                        console.log('Delivery window:', startDate, 'to', endDate);
-
                         const ordersRef = collection(db, 'orders');
-
-                        // Get all processing orders and filter by date/time in JavaScript
                         const allOrdersQuery = query(
                             ordersRef,
                             where('status', '==', 'processing'),
                             orderBy('createdAt', 'desc')
                         );
-                        
                         const allOrdersSnapshot = await getDocs(allOrdersQuery);
                         console.log('Total processing orders found:', allOrdersSnapshot.size);
-                        
+
                         const items = [];
-                        
-                        // Process all orders and filter by date/time
+                        const selectedDeliveryDateStr = deliveryDate.toISOString().split('T')[0];
+
+                        // Helper to get next non-Sunday date
+                        function getNextNonSunday(date, skip = 1) {
+                            let d = new Date(date);
+                            for (let i = 0; i < skip; ) {
+                                d.setDate(d.getDate() + 1);
+                                if (d.getDay() !== 0) i++;
+                            }
+                            return d;
+                        }
+
+                        // For each order, calculate its delivery date and only include if it matches the selected delivery date
                         allOrdersSnapshot.forEach(doc => {
                             const data = doc.data();
                             const orderTime = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-                            const orderDate = new Date(orderTime);
-
-                            // Only include orders strictly after 4:30 PM on the start day
-                            let shouldInclude = false;
-                            if (
-                                (orderDate > startDate && orderDate <= endDate) ||
-                                // If it's the exact startDate, must be after 4:30 PM
-                                (orderDate.toDateString() === startDate.toDateString() &&
-                                 (orderDate.getHours() > 16 || (orderDate.getHours() === 16 && orderDate.getMinutes() >= 30)) &&
-                                 orderDate <= endDate)
-                            ) {
-                                shouldInclude = true;
+                            let deliveryForOrder;
+                            if (orderTime.getHours() > 16 || (orderTime.getHours() === 16 && orderTime.getMinutes() >= 30)) {
+                                // After 4:30 PM: delivery is the second next non-Sunday
+                                deliveryForOrder = getNextNonSunday(orderTime, 2);
+                            } else {
+                                // Before 4:30 PM: delivery is the next non-Sunday
+                                deliveryForOrder = getNextNonSunday(orderTime, 1);
                             }
-
-                            if (shouldInclude && data.items) {
+                            const deliveryForOrderStr = deliveryForOrder.toISOString().split('T')[0];
+                            if (deliveryForOrderStr === selectedDeliveryDateStr && data.items) {
                                 Object.values(data.items).forEach(item => {
                                     items.push({
                                         ...item,
@@ -231,23 +209,23 @@
                                 });
                             }
                         });
-                        
+
                         this.deliveryItems = items;
                         this.totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-                        
+
                         console.log('Found items:', items.length, 'Total quantity:', this.totalItems);
-                        
+
                         if (items.length === 0) {
-                            this.message = { 
-                                text: this.t('noItemsFound'), 
-                                type: 'info' 
+                            this.message = {
+                                text: this.t('noItemsFound'),
+                                type: 'info'
                             };
                         }
                     } catch (error) {
                         console.error('Error loading delivery items:', error);
-                        this.message = { 
-                            text: 'Failed to load delivery items: ' + error.message, 
-                            type: 'error' 
+                        this.message = {
+                            text: 'Failed to load delivery items: ' + error.message,
+                            type: 'error'
                         };
                     } finally {
                         this.isLoading = false;
