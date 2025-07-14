@@ -381,11 +381,22 @@
                     imageData.value = '';
                 };
                 const filteredProducts = computed(() => {
-                    if (!searchQuery.value) return products.value;
-                    return products.value.filter(p =>
-                        (p.name && p.name.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
-                        (p.cname && p.cname.includes(searchQuery.value))
-                    );
+                    let filtered = products.value;
+                    
+                    // Apply search filter
+                    if (searchQuery.value) {
+                        filtered = filtered.filter(p =>
+                            (p.name && p.name.toLowerCase().includes(searchQuery.value.toLowerCase())) ||
+                            (p.cname && p.cname.includes(searchQuery.value))
+                        );
+                    }
+                    
+                    // Sort alphabetically by product name
+                    return filtered.sort((a, b) => {
+                        const nameA = (a.name || '').toLowerCase();
+                        const nameB = (b.name || '').toLowerCase();
+                        return nameA.localeCompare(nameB);
+                    });
                 });
                 return {
                     isAuthenticated,
