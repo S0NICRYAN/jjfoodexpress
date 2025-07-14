@@ -148,21 +148,47 @@
                     
                     try {
                         console.log('Loading delivery items for date:', this.deliveryDate);
-                        // Calculate the date range based on the selected delivery date
                         const deliveryDate = new Date(this.deliveryDate);
-                        
-                        // Start: 2 days prior after 4:30 PM
-                        const startDate = new Date(deliveryDate);
-                        startDate.setDate(deliveryDate.getDate() - 2);
-                        startDate.setHours(16, 30, 0, 0);
-                        
-                        // End: End of the day prior to delivery date
-                        const endDate = new Date(deliveryDate);
-                        endDate.setDate(deliveryDate.getDate() - 1);
-                        endDate.setHours(23, 59, 59, 999);
-                        
+
+                        // Prevent delivery on Sundays
+                        if (deliveryDate.getDay() === 0) { // 0 = Sunday
+                            this.isLoading = false;
+                            this.deliveryItems = [];
+                            this.totalItems = 0;
+                            this.message = {
+                                text: this.currentLang === 'zh' ? '周日不配送，请选择其他日期。' : 'No delivery on Sundays. Please select another date.',
+                                type: 'info'
+                            };
+                            return;
+                        }
+
+                        // Find two previous non-Sunday days
+                        let daysFound = 0;
+                        let tempDate = new Date(deliveryDate);
+                        let prevDates = [];
+                        while (daysFound < 2) {
+                            tempDate.setDate(tempDate.getDate() - 1);
+                            if (tempDate.getDay() !== 0) { // Not Sunday
+                                prevDates.unshift(new Date(tempDate)); // Add to start of array
+                                daysFound++;
+                            }
+                        }
+                        // prevDates[0]: two non-Sunday days before delivery date
+                        // prevDates[1]: one non-Sunday day before delivery date
+
+                        // Set window:
+                        // Start: two non-Sunday days before, at 4:30 PM (orders after 4:30 PM)
+                        // End: one non-Sunday day before, at 11:59:59 PM
+                        const startDate = new Date(prevDates[0]);
+                        startDate.setHours(16, 30, 0, 0); // 4:30 PM
+                        const endDate = new Date(prevDates[1]);
+                        endDate.setHours(23, 59, 59, 999); // End of day
+
+                        // Debug log for window
+                        console.log('Delivery window:', startDate, 'to', endDate);
+
                         const ordersRef = collection(db, 'orders');
-                        
+
                         // Get all processing orders and filter by date/time in JavaScript
                         const allOrdersQuery = query(
                             ordersRef,
@@ -180,15 +206,19 @@
                             const data = doc.data();
                             const orderTime = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
                             const orderDate = new Date(orderTime);
-                            
-                            // Check if order qualifies for delivery
+
+                            // Only include orders strictly after 4:30 PM on the start day
                             let shouldInclude = false;
-                            
-                            // Check if order is within the date range
-                            if (orderDate >= startDate && orderDate <= endDate) {
+                            if (
+                                (orderDate > startDate && orderDate <= endDate) ||
+                                // If it's the exact startDate, must be after 4:30 PM
+                                (orderDate.toDateString() === startDate.toDateString() &&
+                                 (orderDate.getHours() > 16 || (orderDate.getHours() === 16 && orderDate.getMinutes() >= 30)) &&
+                                 orderDate <= endDate)
+                            ) {
                                 shouldInclude = true;
                             }
-                            
+
                             if (shouldInclude && data.items) {
                                 Object.values(data.items).forEach(item => {
                                     items.push({
