@@ -1000,7 +1000,8 @@
                                 });
                             }
                         });
-                        const itemsHtml = Object.values(combinedItems).map((item, idx) =>
+                        const itemsArr = Object.values(combinedItems);
+                        const itemsHtml = itemsArr.length > 0 ? itemsArr.map((item, idx) =>
                             `<tr>
                                 <td style="width:${colWidths[0]}px;text-align:center;">${idx + 1}</td>
                                 <td style="width:${colWidths[1]}px;">${item.chinese || item.name || ''}</td>
@@ -1009,7 +1010,7 @@
                                 <td style="width:${colWidths[4]}px;text-align:right;">${item.price ? item.price.toFixed(2) : ''}</td>
                                 <td style="width:${colWidths[5]}px;text-align:right;">${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>
                             </tr>`
-                        ).join('');
+                        ).join('') : `<tr><td colspan="6" style="text-align:center;">No items found.</td></tr>`;
                         const printWindow = window.open('', '_blank');
                         printWindow.document.write(`
                             <html lang="en">
