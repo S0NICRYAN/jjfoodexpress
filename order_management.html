@@ -954,6 +954,24 @@
                             alert('No valid orders found for this date. Only processing and delivered orders can be included in invoices.');
                             return;
                         }
+                        // Find the highest order number (suffix) in the window
+                        let maxOrderNum = null;
+                        relatedOrders.forEach(o => {
+                            let oid = o.orderId || o.id || '';
+                            let num = null;
+                            if (oid && oid.includes('-')) {
+                                const parts = oid.split('-');
+                                num = parts[1];
+                            }
+                            if (num && (!maxOrderNum || parseInt(num, 10) > parseInt(maxOrderNum, 10))) {
+                                maxOrderNum = num;
+                            }
+                        });
+                        // Format date as DDMMYYYY
+                        const pad = n => n.toString().padStart(2, '0');
+                        const dateStr = pad(invoiceDate.getDate()) + pad(invoiceDate.getMonth() + 1) + invoiceDate.getFullYear();
+                        // Invoice number: outletId + '_' + maxOrderNum + '_' + dateStr
+                        const invoiceNumber = `${order.outletId}_${maxOrderNum || ''}_${dateStr}`;
                         // Combine items from all orders
                         const combinedItems = {};
                         let totalSubtotal = 0;
@@ -996,7 +1014,7 @@
                             <html lang="en">
                                 <head>
                                     <meta charset="UTF-8">
-                                    <title>Invoice - ${order.orderId || ''}</title>
+                                    <title>${invoiceNumber}</title>
                                     <style>
                                         body { font-family: 'Arial', 'SimSun', sans-serif; margin: 20px; }
                                         .header { text-align: center; margin-bottom: 30px; }
@@ -1011,13 +1029,16 @@
                                     <div class="header">
                                         <h1>SHIAWASE (S) PTE LTD</h1>
                                         <h2>Order Invoice</h2>
-                                        <p>Order ID: ${order.orderId || ''}</p>
-                                        <p>Outlet Name: ${order.outletName || ''}</p>
-                                        <p>Outlet Address: ${order.outletAddress || ''}</p>
                                     </div>
-                                    <div class="summary">
-                                        <p><strong>Order Date:</strong> ${order.createdAt ? formatDateTime(order.createdAt) : ''}</p>
-                                        <p><strong>Delivery Date:</strong> ${order.deliveryDate || ''}</p>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+                                        <div style="flex: 1;">
+                                            <p><strong>DELIVER TO:</strong></p>
+                                            <p style="margin-top: 10px; line-height: 1.4;">${order.outletAddress || ''}</p>
+                                        </div>
+                                        <div style="flex: 1; text-align: right;">
+                                            <p><strong>DATE:</strong> ${formatDate(invoiceDate)}</p>
+                                            <p><strong>INVOICE NO:</strong> ${invoiceNumber}</p>
+                                        </div>
                                     </div>
                                     <table>
                                         <thead>
