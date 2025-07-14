@@ -917,29 +917,92 @@
                     if (!selectedOrder.value) return;
                     try {
                         const order = selectedOrder.value;
-                        // Prepare order items HTML with Chinese name and UOM/unit logic
-                        const itemsHtml = (order.items || []).map((item, idx) =>
+                        const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+                        const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes(); // Convert to minutes
+                        const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
+                        // Determine which date to use for invoice
+                        let invoiceDate = new Date(orderDate);
+                        if (orderTime > cutoffTime) {
+                            invoiceDate.setDate(invoiceDate.getDate() + 1);
+                        }
+                        // Calculate the start and end for the invoice window
+                        const invoiceStart = new Date(invoiceDate);
+                        invoiceStart.setDate(invoiceDate.getDate() - 1);
+                        invoiceStart.setHours(16, 30, 0, 0); // Previous day 16:30
+                        const invoiceEnd = new Date(invoiceDate);
+                        invoiceEnd.setHours(16, 30, 0, 0); // Invoice day 16:30
+                        // Fetch all orders for the same outlet in the invoice window
+                        const ordersRef = collection(db, 'orders');
+                        const q = query(
+                            ordersRef,
+                            where('outletId', '==', order.outletId),
+                            where('createdAt', '>', invoiceStart),
+                            where('createdAt', '<=', invoiceEnd),
+                            where('status', 'in', ['processing', 'delivered'])
+                        );
+                        const snapshot = await getDocs(q);
+                        const relatedOrders = [];
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            relatedOrders.push({
+                                id: doc.id,
+                                ...data,
+                                createdAt: data.createdAt
+                            });
+                        });
+                        if (relatedOrders.length === 0) {
+                            alert('No valid orders found for this date. Only processing and delivered orders can be included in invoices.');
+                            return;
+                        }
+                        // Combine items from all orders
+                        const combinedItems = {};
+                        let totalSubtotal = 0;
+                        relatedOrders.forEach(order => {
+                            if (order.items) {
+                                Object.values(order.items).forEach(item => {
+                                    const key = `${item.chinese || item.name}_${item.UOM || item.unit}`;
+                                    if (!combinedItems[key]) {
+                                        combinedItems[key] = {
+                                            chinese: item.chinese,
+                                            name: item.name,
+                                            UOM: item.UOM,
+                                            unit: item.unit,
+                                            quantity: 0,
+                                            price: item.price,
+                                            subtotal: 0
+                                        };
+                                    }
+                                    combinedItems[key].quantity += item.quantity;
+                                    combinedItems[key].subtotal += item.subtotal;
+                                    totalSubtotal += item.subtotal;
+                                });
+                            }
+                        });
+                        // Table column widths for alignment
+                        const colWidths = [40, 180, 60, 60, 80, 80];
+                        // Prepare items HTML with fixed widths
+                        const itemsHtml = Object.values(combinedItems).map((item, idx) =>
                             `<tr>
-                                <td>${idx + 1}</td>
-                                <td>${item.chinese || item.name || ''}</td>
-                                <td>${item.quantity || ''}</td>
-                                <td>${item.UOM || item.unit || ''}</td>
-                                <td>${item.price ? item.price.toFixed(2) : ''}</td>
-                                <td>${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>
+                                <td style="width:${colWidths[0]}px;text-align:center;">${idx + 1}</td>
+                                <td style="width:${colWidths[1]}px;">${item.chinese || item.name || ''}</td>
+                                <td style="width:${colWidths[2]}px;text-align:right;">${item.quantity || ''}</td>
+                                <td style="width:${colWidths[3]}px;">${item.UOM || item.unit || ''}</td>
+                                <td style="width:${colWidths[4]}px;text-align:right;">${item.price ? item.price.toFixed(2) : ''}</td>
+                                <td style="width:${colWidths[5]}px;text-align:right;">${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>
                             </tr>`
                         ).join('');
                         const printWindow = window.open('', '_blank');
                         printWindow.document.write(`
-                            <html lang="zh-CN">
+                            <html lang="en">
                                 <head>
                                     <meta charset="UTF-8">
-                                    <title>订单发票 - ${order.orderId || ''}</title>
+                                    <title>Invoice - ${order.orderId || ''}</title>
                                     <style>
-                                        body { font-family: 'SimSun', 'Arial', sans-serif; margin: 20px; }
+                                        body { font-family: 'Arial', 'SimSun', sans-serif; margin: 20px; }
                                         .header { text-align: center; margin-bottom: 30px; }
                                         .summary { margin-bottom: 20px; }
                                         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                        th, td { border: 1px solid #ddd; padding: 8px; }
                                         th { background-color: #f2f2f2; }
                                         .totals { margin-top: 20px; font-weight: bold; }
                                     </style>
@@ -947,24 +1010,24 @@
                                 <body>
                                     <div class="header">
                                         <h1>SHIAWASE (S) PTE LTD</h1>
-                                        <h2>订单发票</h2>
-                                        <p>订单编号：${order.orderId || ''}</p>
-                                        <p>门店名称：${order.outletName || ''}</p>
-                                        <p>门店地址：${order.outletAddress || ''}</p>
+                                        <h2>Order Invoice</h2>
+                                        <p>Order ID: ${order.orderId || ''}</p>
+                                        <p>Outlet Name: ${order.outletName || ''}</p>
+                                        <p>Outlet Address: ${order.outletAddress || ''}</p>
                                     </div>
                                     <div class="summary">
-                                        <p><strong>下单日期：</strong> ${order.createdAt ? formatDateTime(order.createdAt) : ''}</p>
-                                        <p><strong>送货日期：</strong> ${order.deliveryDate || ''}</p>
+                                        <p><strong>Order Date:</strong> ${order.createdAt ? formatDateTime(order.createdAt) : ''}</p>
+                                        <p><strong>Delivery Date:</strong> ${order.deliveryDate || ''}</p>
                                     </div>
                                     <table>
                                         <thead>
                                             <tr>
-                                                <th>序号</th>
-                                                <th>产品名称</th>
-                                                <th>数量</th>
-                                                <th>单位</th>
-                                                <th>单价</th>
-                                                <th>小计</th>
+                                                <th style="width:${colWidths[0]}px;">S/N</th>
+                                                <th style="width:${colWidths[1]}px;">Product Name</th>
+                                                <th style="width:${colWidths[2]}px;">Quantity</th>
+                                                <th style="width:${colWidths[3]}px;">Unit</th>
+                                                <th style="width:${colWidths[4]}px;">Price</th>
+                                                <th style="width:${colWidths[5]}px;">Subtotal</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -972,21 +1035,21 @@
                                         </tbody>
                                         <tfoot>
                                             <tr>
-                                                <td colspan="5" style="text-align: right; font-weight: bold;">小计：</td>
-                                                <td style="font-weight: bold;">${order.subTotal ? order.subTotal.toFixed(2) : '0.00'}</td>
+                                                <td colspan="5" style="text-align: right; font-weight: bold;">Subtotal:</td>
+                                                <td style="font-weight: bold;">${totalSubtotal.toFixed(2)}</td>
                                             </tr>
                                             <tr>
-                                                <td colspan="5" style="text-align: right; font-weight: bold;">消费税 (9%)：</td>
-                                                <td style="font-weight: bold;">${order.subTotal ? (order.subTotal * 0.09).toFixed(2) : '0.00'}</td>
+                                                <td colspan="5" style="text-align: right; font-weight: bold;">GST (9%):</td>
+                                                <td style="font-weight: bold;">${(totalSubtotal * 0.09).toFixed(2)}</td>
                                             </tr>
                                             <tr>
-                                                <td colspan="5" style="text-align: right; font-weight: bold; font-size: 1.1em;">总计：</td>
-                                                <td style="font-weight: bold; font-size: 1.1em;">${order.grandTotal ? order.grandTotal.toFixed(2) : '0.00'}</td>
+                                                <td colspan="5" style="text-align: right; font-weight: bold; font-size: 1.1em;">Grand Total:</td>
+                                                <td style="font-weight: bold; font-size: 1.1em;">${(totalSubtotal * 1.09).toFixed(2)}</td>
                                             </tr>
                                         </tfoot>
                                     </table>
                                     <div class="summary">
-                                        <p><strong>备注：</strong> ${order.remarks || ''}</p>
+                                        <p><strong>Remarks:</strong> ${order.remarks || ''}</p>
                                     </div>
                                 </body>
                             </html>
