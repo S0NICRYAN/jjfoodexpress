@@ -240,10 +240,17 @@
                     // lang: 'en' for English, 'zh' for Chinese
                     const isZh = lang === 'zh';
                     const printWindow = window.open('', '_blank');
+                    // Format the selected delivery date for display
+                    const deliveryDateDisplay = new Date(this.deliveryDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
                     printWindow.document.write(`
                         <html>
                             <head>
-                                <title>Delivery Loading - ${this.currentDate}</title>
+                                <title>Delivery Loading - ${deliveryDateDisplay}</title>
                                 <style>
                                     body { font-family: Arial, sans-serif; margin: 20px; }
                                     .header { text-align: center; margin-bottom: 30px; }
@@ -258,7 +265,7 @@
                                 <div class="header">
                                     <h1>SHIAWASE (S) PTE LTD</h1>
                                     <h2>Delivery Loading Sheet</h2>
-                                    <p>Date: ${this.currentDate}</p>
+                                    <p>Date: ${deliveryDateDisplay}</p>
                                 </div>
                                 <div class="summary">
                                     <p><strong>Total Items:</strong> ${this.totalUniqueItems}</p>
