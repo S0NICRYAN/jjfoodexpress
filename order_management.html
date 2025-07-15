@@ -971,6 +971,17 @@
                         const dateStr = pad(invoiceDate.getDate()) + pad(invoiceDate.getMonth() + 1) + invoiceDate.getFullYear();
                         // Invoice number: maxOrderNum + '/' + dateStr
                         const invoiceNumber = `${maxOrderNum || ''}/${dateStr}`;
+                        
+                        // Create document title with prefix-suffix-invoice format
+                        let documentTitle = invoiceNumber;
+                        if (order.orderId && order.orderId.includes('-')) {
+                            const parts = order.orderId.split('-');
+                            if (parts.length >= 2) {
+                                const prefix = parts[0];
+                                const suffix = parts[1];
+                                documentTitle = `${prefix}-${suffix}-${invoiceNumber}`;
+                            }
+                        }
                         // Prepare address lines
                         const addressLines = (order.outletAddress || '').split(/\r?\n/).filter(line => line.trim() !== '');
                         // Table column widths for alignment
@@ -1029,10 +1040,13 @@
                             + `</table>`;
                         const printWindow = window.open('', '_blank');
                         printWindow.document.write(`
+                            <!DOCTYPE html>
                             <html lang="en">
                                 <head>
                                     <meta charset="UTF-8">
-                                    <title>${invoiceNumber}</title>
+                                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                    <base href="data:,">
+                                    <title>${documentTitle}</title>
                                     <style>
                                         body { font-family: 'Arial', 'SimSun', sans-serif; margin: 20px; }
                                         .header { text-align: center; margin-bottom: 10px; }
@@ -1079,6 +1093,7 @@
                                         <div class="details-right">
                                             <div><span class="details-label">DATE :</span> ${pad(invoiceDate.getDate())}/${pad(invoiceDate.getMonth() + 1)}/${invoiceDate.getFullYear()}</div>
                                             <div><span class="details-label">INVOICE NO :</span> ${invoiceNumber}</div>
+                                            <div><span class="details-label">TEL :</span> (65) 6570 9171</div>
                                         </div>
                                     </div>
                                     ${tableHtml}
