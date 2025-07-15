@@ -265,9 +265,9 @@
                         <div class="filter-group">
                             <label>{{ t('dateRange') }}</label>
                             <div class="date-filter-group">
-                                <input type="date" v-model="startDate" class="form-control" :max="endDate || undefined" @change="handleStartDateChange">
+                                <input type="date" v-model="startDate" class="form-control" @change="handleStartDateChange">
                                 <span>-</span>
-                                <input type="date" v-model="endDate" class="form-control" :min="startDate || undefined" @change="handleEndDateChange">
+                                <input type="date" v-model="endDate" class="form-control" @change="handleEndDateChange">
                             </div>
                         </div>
                         <div class="filter-group">
@@ -419,8 +419,8 @@
                                     <td>{{ item.name }}</td>
                                     <td>{{ item.quantity }}</td>
                                     <td>{{ item.UOM || item.unitChinese || item.unit }}</td>
-                                    <td>${{ item.price?.toFixed(2) }}</td>
-                                    <td>${{ item.subtotal?.toFixed(2) }}</td>
+                                    <td>${{ (item.price || 0).toFixed(2) }}</td>
+                                    <td>${{ (item.subtotal || 0).toFixed(2) }}</td>
                                 </tr>
                             </tbody>
                             <tfoot>
@@ -1016,8 +1016,8 @@
                                 `<td style='width:${colWidths[1]}px;border:1px solid #000;padding:8px;text-align:left;'>${item.chinese || item.name || ''}</td>`+
                                 `<td style='width:${colWidths[2]}px;border:1px solid #000;padding:8px;text-align:center;'>${item.quantity || ''}</td>`+
                                 `<td style='width:${colWidths[3]}px;border:1px solid #000;padding:8px;text-align:center;'>${item.UOM || item.unit || ''}</td>`+
-                                `<td style='width:${colWidths[4]}px;border:1px solid #000;padding:8px;text-align:right;'>${item.price ? item.price.toFixed(2) : ''}</td>`+
-                                `<td style='width:${colWidths[5]}px;border:1px solid #000;padding:8px;text-align:right;'>${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>`+
+                                `<td style='width:${colWidths[4]}px;border:1px solid #000;padding:8px;text-align:right;'>${(item.price || 0).toFixed(2)}</td>`+
+                                `<td style='width:${colWidths[5]}px;border:1px solid #000;padding:8px;text-align:right;'>${(item.subtotal || 0).toFixed(2)}</td>`+
                                 `</tr>`
                             ).join('') : `<tr><td colspan='6' style='border:1px solid #000;padding:8px;text-align:center;'>No items found.</td></tr>`)
                             + `</tbody>`
@@ -1079,7 +1079,6 @@
                                         <div class="details-right">
                                             <div><span class="details-label">DATE :</span> ${pad(invoiceDate.getDate())}/${pad(invoiceDate.getMonth() + 1)}/${invoiceDate.getFullYear()}</div>
                                             <div><span class="details-label">INVOICE NO :</span> ${invoiceNumber}</div>
-                                            <div><span class="details-label">TEL :</span> (65) 6570 9171</div>
                                         </div>
                                     </div>
                                     ${tableHtml}
@@ -1220,17 +1219,19 @@
                 
                 // Handle start date change
                 const handleStartDateChange = () => {
-                    // If start date is after end date, adjust end date
+                    // Only validate if both dates are set and start date is after end date
                     if (startDate.value && endDate.value && startDate.value > endDate.value) {
-                        endDate.value = startDate.value;
+                        // Show a gentle warning instead of auto-adjusting
+                        console.warn('Start date is after end date. Please adjust the date range.');
                     }
                 };
                 
                 // Handle end date change
                 const handleEndDateChange = () => {
-                    // If end date is before start date, adjust start date
+                    // Only validate if both dates are set and end date is before start date
                     if (startDate.value && endDate.value && endDate.value < startDate.value) {
-                        startDate.value = endDate.value;
+                        // Show a gentle warning instead of auto-adjusting
+                        console.warn('End date is before start date. Please adjust the date range.');
                     }
                 };
                 
