@@ -46,7 +46,6 @@
                 const outletId = ref('ISF-CP');
                 const deliveryDate = ref('');
                 const remarks = ref('');
-                const referenceNumber = ref('');
                 const isSubmitting = ref(false);
                 const isSubmitSuccess = ref(false);
                 const errorMessage = ref('');
@@ -88,7 +87,6 @@
                         afterCutoff: "已超过截单时间（四点三十分）。您最早的送货日期为后天。",
                         beforeCutoff: "请仔细检查日期。四点三十分后下的订单将在第二天处理。",
                         enterRemarks: "订货者 / 在此输入备注",
-                        enterReference: "在此输入参考编号",
                         maxstock:"最大订购量"
                     },
                     en: {
@@ -117,7 +115,6 @@
                         afterCutoff: "It is after the order cutoff time (04:30 PM). Your earliest delivery date is in 2 days.",
                         beforeCutoff: "Kindly double check the date. Orders placed after 04:30 PM will be processed the next day.",
                         enterRemarks: "Staff Name / Enter your remarks here",
-                        enterReference: "Enter your reference here",
                         maxstock: "Max stock available"
                     }
                 };
@@ -461,7 +458,6 @@
                             grandTotal: grandTotal.value,
                             deliveryDate: deliveryDate.value,
                             remarks: remarks.value,
-                            referenceNumber: referenceNumber.value,
                             status: 'pending',
                             createdAt: serverTimestamp()
                         };
@@ -497,7 +493,7 @@
                           outletName: outletName.value,
                           outletAddress: outletAddress.value,
                           deliveryDate: deliveryDate.value,
-                          referenceNumber: referenceNumber.value || 'N/A',
+                          referenceNumber: 'N/A', // No reference number in the new template
                           remarks: remarks.value || 'N/A',
                           items: itemsString,
                           subTotal: formatCurrency(subTotal.value),
@@ -544,7 +540,6 @@
                     outletAddress,
                     deliveryDate,
                     remarks,
-                    referenceNumber,
                     isSubmitting,
                     isSubmitSuccess,
                     errorMessage,
@@ -768,12 +763,6 @@
                         <div class="form-group">
                             <label for="remarks">{{ t('remarks') }}:</label>
                             <textarea id="remarks" class="form-control" v-model="remarks" rows="4" :placeholder="t('enterRemarks')"></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="reference">{{ t('referenceNumber') }}:</label>
-                            <input type="text" id="reference" class="form-control" v-model="referenceNumber" :placeholder="t('enterReference')">
-                            <div class="form-note">{{ t('optional') }}</div>
                         </div>
                     </div>
                     
