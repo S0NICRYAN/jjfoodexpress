@@ -323,7 +323,7 @@
                         const productsRef = collection(db, 'products');
                         const productsSnapshot = await getDocs(productsRef);
                         
-                        // Combine outlet product data with global product data
+                        // Combine outlet product data with global product data and sort alphabetically
                         products.value = productsSnapshot.docs
                             .filter(doc => productRefs.has(doc.id))
                             .map(doc => {
@@ -334,6 +334,20 @@
                                     productId: doc.id,
                                     orderQty: outletData.orderQty
                                 };
+                            })
+                            .sort((a, b) => {
+                                // Sort by English name first, then by Chinese name if English names are the same
+                                const nameA = (a.name || '').toLowerCase();
+                                const nameB = (b.name || '').toLowerCase();
+                                
+                                if (nameA !== nameB) {
+                                    return nameA.localeCompare(nameB);
+                                }
+                                
+                                // If English names are the same, sort by Chinese name
+                                const cnameA = (a.cname || '').toLowerCase();
+                                const cnameB = (b.cname || '').toLowerCase();
+                                return cnameA.localeCompare(cnameB);
                             });
                         
                         isLoading.value = false;
