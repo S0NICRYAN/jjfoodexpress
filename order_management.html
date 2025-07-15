@@ -972,10 +972,10 @@
                         // Invoice number: maxOrderNum + '/' + dateStr
                         const invoiceNumber = `${maxOrderNum || ''}/${dateStr}`;
                         
-                        // Create document title with prefix-suffix-invoice format
+                        // Create document title with outlet prefix-suffix-invoice format
                         let documentTitle = invoiceNumber;
-                        if (order.orderId && order.orderId.includes('-')) {
-                            const parts = order.orderId.split('-');
+                        if (order.outletId && order.outletId.includes('-')) {
+                            const parts = order.outletId.split('-');
                             if (parts.length >= 2) {
                                 const prefix = parts[0];
                                 const suffix = parts[1];
@@ -1038,14 +1038,13 @@
                             + `<tr style='background-color:#e3f2fd;'><td colspan='5' style='border:1px solid #000;padding:8px;text-align:right;font-weight:bold;font-size:1.1em;'>TOTAL DUE IN S$</td><td style='border:1px solid #000;padding:8px;text-align:right;font-weight:bold;font-size:1.1em;'>${(totalSubtotal * 1.09).toFixed(2)}</td></tr>`
                             + `</tfoot>`
                             + `</table>`;
-                        const printWindow = window.open('', '_blank');
+                        const printWindow = window.open('', '_blank', 'noopener,noreferrer');
                         printWindow.document.write(`
                             <!DOCTYPE html>
                             <html lang="en">
                                 <head>
                                     <meta charset="UTF-8">
                                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                                    <base href="data:,">
                                     <title>${documentTitle}</title>
                                     <style>
                                         body { font-family: 'Arial', 'SimSun', sans-serif; margin: 20px; }
@@ -1072,7 +1071,9 @@
                                         @media print {
                                             body { margin: 0; }
                                             table { page-break-inside: avoid; }
+                                            @page { margin: 0; }
                                         }
+                                        body { margin: 0; padding: 20px; }
                                     </style>
                                 </head>
                                 <body>
