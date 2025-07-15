@@ -1001,31 +1001,31 @@
                             }
                         });
                         const itemsArr = Object.values(combinedItems);
-                        const tableHtml = `<table style='width:100%;border-collapse:collapse;margin-top:20px;'>`
-                            + `<thead><tr>`
-                            + `<th style='width:${colWidths[0]}px;'>S/N</th>`
-                            + `<th style='width:${colWidths[1]}px;'>Product Name</th>`
-                            + `<th style='width:${colWidths[2]}px;'>Quantity</th>`
-                            + `<th style='width:${colWidths[3]}px;'>Unit</th>`
-                            + `<th style='width:${colWidths[4]}px;'>Price</th>`
-                            + `<th style='width:${colWidths[5]}px;'>Subtotal</th>`
+                        const tableHtml = `<table style='width:100%;border-collapse:collapse;margin-top:20px;border:1px solid #000;'>`
+                            + `<thead><tr style='background-color:#f0f0f0;'>`
+                            + `<th style='width:${colWidths[0]}px;border:1px solid #000;padding:8px;text-align:center;font-weight:bold;'>S/N</th>`
+                            + `<th style='width:${colWidths[1]}px;border:1px solid #000;padding:8px;text-align:left;font-weight:bold;'>Product Name</th>`
+                            + `<th style='width:${colWidths[2]}px;border:1px solid #000;padding:8px;text-align:center;font-weight:bold;'>Quantity</th>`
+                            + `<th style='width:${colWidths[3]}px;border:1px solid #000;padding:8px;text-align:center;font-weight:bold;'>Unit</th>`
+                            + `<th style='width:${colWidths[4]}px;border:1px solid #000;padding:8px;text-align:right;font-weight:bold;'>Price</th>`
+                            + `<th style='width:${colWidths[5]}px;border:1px solid #000;padding:8px;text-align:right;font-weight:bold;'>Subtotal</th>`
                             + `</tr></thead>`
                             + `<tbody>`
                             + (itemsArr.length > 0 ? itemsArr.map((item, idx) =>
                                 `<tr>`+
-                                `<td style='width:${colWidths[0]}px;text-align:center;'>${idx + 1}</td>`+
-                                `<td style='width:${colWidths[1]}px;'>${item.chinese || item.name || ''}</td>`+
-                                `<td style='width:${colWidths[2]}px;text-align:right;'>${item.quantity || ''}</td>`+
-                                `<td style='width:${colWidths[3]}px;'>${item.UOM || item.unit || ''}</td>`+
-                                `<td style='width:${colWidths[4]}px;text-align:right;'>${item.price ? item.price.toFixed(2) : ''}</td>`+
-                                `<td style='width:${colWidths[5]}px;text-align:right;'>${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>`+
+                                `<td style='width:${colWidths[0]}px;border:1px solid #000;padding:8px;text-align:center;'>${idx + 1}</td>`+
+                                `<td style='width:${colWidths[1]}px;border:1px solid #000;padding:8px;text-align:left;'>${item.chinese || item.name || ''}</td>`+
+                                `<td style='width:${colWidths[2]}px;border:1px solid #000;padding:8px;text-align:center;'>${item.quantity || ''}</td>`+
+                                `<td style='width:${colWidths[3]}px;border:1px solid #000;padding:8px;text-align:center;'>${item.UOM || item.unit || ''}</td>`+
+                                `<td style='width:${colWidths[4]}px;border:1px solid #000;padding:8px;text-align:right;'>${item.price ? item.price.toFixed(2) : ''}</td>`+
+                                `<td style='width:${colWidths[5]}px;border:1px solid #000;padding:8px;text-align:right;'>${item.subtotal ? item.subtotal.toFixed(2) : ''}</td>`+
                                 `</tr>`
-                            ).join('') : `<tr><td colspan='6' style='text-align:center;'>No items found.</td></tr>`)
+                            ).join('') : `<tr><td colspan='6' style='border:1px solid #000;padding:8px;text-align:center;'>No items found.</td></tr>`)
                             + `</tbody>`
                             + `<tfoot>`
-                            + `<tr><td colspan='5' style='text-align: right; font-weight: bold;'>TOTAL</td><td style='font-weight: bold;'>${totalSubtotal.toFixed(2)}</td></tr>`
-                            + `<tr><td colspan='5' style='text-align: right; font-weight: bold;'>ADD GST @9%</td><td style='font-weight: bold;'>${(totalSubtotal * 0.09).toFixed(2)}</td></tr>`
-                            + `<tr><td colspan='5' style='text-align: right; font-weight: bold; font-size: 1.1em;'>TOTAL DUE IN S$</td><td style='font-weight: bold; font-size: 1.1em;'>${(totalSubtotal * 1.09).toFixed(2)}</td></tr>`
+                            + `<tr style='background-color:#f8f9fa;'><td colspan='5' style='border:1px solid #000;padding:8px;text-align:right;font-weight:bold;'>TOTAL</td><td style='border:1px solid #000;padding:8px;text-align:right;font-weight:bold;'>${totalSubtotal.toFixed(2)}</td></tr>`
+                            + `<tr style='background-color:#f8f9fa;'><td colspan='5' style='border:1px solid #000;padding:8px;text-align:right;font-weight:bold;'>ADD GST @9%</td><td style='border:1px solid #000;padding:8px;text-align:right;font-weight:bold;'>${(totalSubtotal * 0.09).toFixed(2)}</td></tr>`
+                            + `<tr style='background-color:#e3f2fd;'><td colspan='5' style='border:1px solid #000;padding:8px;text-align:right;font-weight:bold;font-size:1.1em;'>TOTAL DUE IN S$</td><td style='border:1px solid #000;padding:8px;text-align:right;font-weight:bold;font-size:1.1em;'>${(totalSubtotal * 1.09).toFixed(2)}</td></tr>`
                             + `</tfoot>`
                             + `</table>`;
                         const printWindow = window.open('', '_blank');
@@ -1051,6 +1051,15 @@
                                         .signature-label { font-weight: bold; }
                                         .signature-line { display: inline-block; border-bottom: 1px solid #000; width: 120px; margin: 0 8px; }
                                         .signature-chinese { font-family: 'SimSun', 'Arial', sans-serif; }
+                                        table { border-collapse: collapse; width: 100%; }
+                                        th, td { border: 1px solid #000; padding: 8px; }
+                                        th { background-color: #f0f0f0; font-weight: bold; }
+                                        tfoot tr { background-color: #f8f9fa; }
+                                        tfoot tr:last-child { background-color: #e3f2fd; }
+                                        @media print {
+                                            body { margin: 0; }
+                                            table { page-break-inside: avoid; }
+                                        }
                                     </style>
                                 </head>
                                 <body>
