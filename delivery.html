@@ -285,7 +285,7 @@
                                         ${this.groupedItems.map(item => `
                                             <tr>
                                                 ${isZh ? `<td>${item.chinese || ''}</td>` : `<td>${item.name}</td>`}
-                                                <td>${item.unit || item.unitChinese || item.UOM || ''}</td>
+                                                ${isZh ? `<td>${item.unit || ''}</td>` : `<td>${item.unitChinese}</td>`}
                                                 <td>${item.totalQuantity}</td>
                                             </tr>
                                         `).join('')}
