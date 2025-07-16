@@ -53,7 +53,6 @@
                 const currentMinutes = new Date().getMinutes();
                 const currentDay = new Date().getDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
                 const isAfterCutoff = (currentHour > 16 || (currentHour === 16 && currentMinutes >= 30));
-                const isSunday = currentDay === 0;
                 const dateError = ref('');
                 const currentLang = ref('zh'); // Default to Chinese
                 const referringPage = ref('index.html'); // Default referring page
@@ -406,12 +405,6 @@
                 async function submitOrder() {
                     if (isSubmitting.value) return;
                     
-                    // Check if it's Sunday
-                    if (isSunday) {
-                        errorMessage.value = '周日不接受订单。请在工作日下单。/ Orders are not accepted on Sundays. Please place your order on a weekday.';
-                        return;
-                    }
-                    
                     // First validate the delivery date
                     if (!validateDeliveryDate()) {
                         // Scroll to the date input to show the error
@@ -649,15 +642,6 @@
             
             <!-- Order preview content -->
             <div v-if="!isSubmitSuccess && !errorMessage" class="content-inner">
-                <!-- Sunday message -->
-                <div v-if="isSunday" class="sunday-message">
-                    <h2>周日休息 / Sunday Closed</h2>
-                    <p>周日不接受订单。请在工作日下单。/ Orders are not accepted on Sundays. Please place your order on a weekday.</p>
-                    <button class="btn" @click="cancelOrder">{{ t('returnHome') }}</button>
-                </div>
-                
-                <!-- Regular order form (hidden on Sunday) -->
-                <div v-else>
                     <!-- Updated outlet info section to include address -->
                     <div class="outlet-info">
                         <div class="outlet-name">{{ outletName }}</div>
