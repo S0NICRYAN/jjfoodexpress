@@ -181,15 +181,11 @@
                     }
                     // Handle Saturday specially
                     else if (currentDay === 6) {
-                        // For Saturday, deliver on Monday
+                        // For Saturday, deliver on Monday (regardless of time)
+                        // Saturday orders are processed on Sunday, and Sunday orders deliver on Monday
                         deliveryDate.setDate(deliveryDate.getDate() + 2);
                     }
-                    // Handle Sunday specially
-                    else if (currentDay === 0) {
-                        // For Sunday, deliver on Tuesday
-                        deliveryDate.setDate(deliveryDate.getDate() + 2);
-                    }
-                    // Handle all other days
+                    // Handle all other days (including Sunday)
                     else {
                         // If time is 4:30 PM or later, delivery date should be 2 days later
                         const daysToAdd = (currentHour > 16 || (currentHour === 16 && currentMinutes >= 30)) ? 2 : 1;
