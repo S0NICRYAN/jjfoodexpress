@@ -463,11 +463,13 @@
                     }
                     
                     try {
-                        const orderData = {
-                            outletId: outletId.value,
-                            outletName: outletName.value,
-                            outletAddress: outletAddress.value,
-                            items: orderedItems.map(item => ({
+                        // Process items in smaller chunks to avoid memory issues on mobile
+                        const processedItems = [];
+                        for (let i = 0; i < orderedItems.length; i++) {
+                            const item = orderedItems[i];
+                            
+                            // Create item object without large image data for mobile optimization
+                            const processedItem = {
                                 productId: item.productId,
                                 name: item.name,
                                 chinese: item.cname,
@@ -477,21 +479,51 @@
                                 UOM: item.UOM,
                                 quantity: item.orderQty,
                                 subtotal: roundToTwoDecimals(parseFloat(item.price || 0) * item.orderQty),
-                                image: item.imageData || item.image,
+                                // Use image URL instead of base64 data to reduce size
+                                image: item.image || '/logo.png',
                                 stock: item.stock
-                            })),
+                            };
+                            
+                            processedItems.push(processedItem);
+                            
+                            // Add small delay to prevent UI blocking on mobile
+                            if (i % 10 === 0) {
+                                await new Promise(resolve => setTimeout(resolve, 1));
+                            }
+                        }
+                        
+                        const orderData = {
+                            outletId: outletId.value,
+                            outletName: outletName.value,
+                            outletAddress: outletAddress.value,
+                            items: processedItems,
                             subTotal: subTotal.value,
                             gst: gst.value,
                             grandTotal: grandTotal.value,
-                            referringPage: `order.html?outlet=${outletId.value}` // Store the current page path with outlet ID
+                            referringPage: `order.html?outlet=${outletId.value}`
                         };
                         
-                        localStorage.setItem('orderPreview', JSON.stringify(orderData));
+                        // Check localStorage size before saving
+                        const orderDataString = JSON.stringify(orderData);
+                        if (orderDataString.length > 5000000) { // 5MB limit
+                            alert('Order is too large. Please reduce the number of items or quantities. \n 订单太大。请减少商品数量或订购量。');
+                            return;
+                        }
+                        
+                        localStorage.setItem('orderPreview', orderDataString);
                         
                         window.location.href = 'preview.html';
                     } catch (error) {
                         console.error('Error preparing order:', error);
-                        alert('There was an error preparing your order. Please try again.');
+                        
+                        // More specific error messages for mobile debugging
+                        if (error.message.includes('QuotaExceededError') || error.message.includes('storage')) {
+                            alert('Storage limit exceeded. Please reduce order size. \n 存储空间不足。请减少订单大小。');
+                        } else if (error.message.includes('memory') || error.message.includes('allocation')) {
+                            alert('Memory limit exceeded. Please reduce order size. \n 内存不足。请减少订单大小。');
+                        } else {
+                            alert('There was an error preparing your order. Please try again. \n 准备订单时出错。请重试。');
+                        }
                     }
                 };
                 

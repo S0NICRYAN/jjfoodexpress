@@ -462,21 +462,31 @@
                         // Save each item to the order's subcollection
                         const itemsCollectionRef = collection(db, 'orders', orderId, 'items');
                         for (const item of orderItems.value) {
-                            const itemRef = doc(itemsCollectionRef); // auto-generated ID
-                            await setDoc(itemRef, item);
+                            try {
+                                const itemRef = doc(itemsCollectionRef); // auto-generated ID
+                                await setDoc(itemRef, item);
+                            } catch (itemError) {
+                                console.error('Error saving item:', itemError);
+                                // Continue with other items even if one fails
+                            }
                         }
 
                         // Deduct stock for each product in the order
                         for (const item of orderItems.value) {
                             if (!item.productId || !item.quantity) continue;
-                            const productRef = doc(db, 'products', item.productId);
-                            await runTransaction(db, async (transaction) => {
-                                const productDoc = await transaction.get(productRef);
-                                if (!productDoc.exists()) return;
-                                const currentStock = productDoc.data().stock || 0;
-                                const newStock = Math.max(0, currentStock - item.quantity);
-                                transaction.update(productRef, { stock: newStock });
-                            });
+                            try {
+                                const productRef = doc(db, 'products', item.productId);
+                                await runTransaction(db, async (transaction) => {
+                                    const productDoc = await transaction.get(productRef);
+                                    if (!productDoc.exists()) return;
+                                    const currentStock = productDoc.data().stock || 0;
+                                    const newStock = Math.max(0, currentStock - item.quantity);
+                                    transaction.update(productRef, { stock: newStock });
+                                });
+                            } catch (stockError) {
+                                console.error('Error updating stock for product:', item.productId, stockError);
+                                // Continue with other products even if stock update fails
+                            }
                         }
 
                         // Prepare email template parameters
@@ -517,7 +527,17 @@
                         // Scroll to top to show success message
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     } catch (error) {
-                        errorMessage.value = '提交订单失败。请重试。 / Failed to submit order. Please try again.';
+                        console.error('Order submission error:', error);
+                        // More specific error messages for mobile debugging
+                        if (error.code === 'unavailable' || error.message.includes('network')) {
+                            errorMessage.value = '网络连接问题。请检查网络连接后重试。 / Network connection issue. Please check your connection and try again.';
+                        } else if (error.code === 'permission-denied') {
+                            errorMessage.value = '权限错误。请刷新页面后重试。 / Permission error. Please refresh the page and try again.';
+                        } else if (error.message.includes('timeout')) {
+                            errorMessage.value = '请求超时。请重试。 / Request timeout. Please try again.';
+                        } else {
+                            errorMessage.value = '提交订单失败。请重试。 / Failed to submit order. Please try again.';
+                        }
                     } finally {
                         isSubmitting.value = false;
                     }
