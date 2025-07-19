@@ -954,7 +954,7 @@
                     try {
                         const order = selectedOrder.value;
                         
-                        // Use deliveryDate for invoice generation
+                        // Use deliveryDate for invoice generation (cutoff time already handled in preview.html)
                         let invoiceDate;
                         if (order.deliveryDate) {
                             // Parse the delivery date (assuming it's in YYYY-MM-DD format)
@@ -962,12 +962,7 @@
                         } else {
                             // Fallback to order creation date if deliveryDate is not available
                             const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
-                            const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes(); // Convert to minutes
-                            const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
                             invoiceDate = new Date(orderDate);
-                            if (orderTime > cutoffTime) {
-                                invoiceDate.setDate(invoiceDate.getDate() + 1);
-                            }
                         }
                         
                         // Calculate the start and end for the invoice window based on delivery date
