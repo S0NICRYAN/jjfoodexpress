@@ -186,7 +186,7 @@
                         }
 
                         // For each order, calculate its delivery date and only include if it matches the selected delivery date
-                        allOrdersSnapshot.forEach(doc => {
+                        for (const doc of allOrdersSnapshot.docs) {
                             const data = doc.data();
                             const orderTime = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
                             let deliveryForOrder;
@@ -198,18 +198,42 @@
                                 deliveryForOrder = getNextNonSunday(orderTime, 1);
                             }
                             const deliveryForOrderStr = deliveryForOrder.toISOString().split('T')[0];
-                            if (deliveryForOrderStr === selectedDeliveryDateStr && data.items) {
-                                Object.values(data.items).forEach(item => {
-                                    items.push({
-                                        ...item,
-                                        orderId: data.orderId || doc.id,
-                                        outletName: data.outletName || data.outletId,
-                                        outletId: data.outletId,
-                                        createdAt: data.createdAt
+                            
+                            if (deliveryForOrderStr === selectedDeliveryDateStr) {
+                                // Check if items exist in the main document (for backward compatibility)
+                                if (data.items) {
+                                    Object.values(data.items).forEach(item => {
+                                        items.push({
+                                            ...item,
+                                            orderId: data.orderId || doc.id,
+                                            outletName: data.outletName || data.outletId,
+                                            outletId: data.outletId,
+                                            createdAt: data.createdAt
+                                        });
                                     });
-                                });
+                                } else {
+                                    // Fetch items from subcollection
+                                    try {
+                                        const itemsCollectionRef = collection(db, 'orders', doc.id, 'items');
+                                        const itemsSnapshot = await getDocs(itemsCollectionRef);
+                                        
+                                        itemsSnapshot.forEach(itemDoc => {
+                                            const item = itemDoc.data();
+                                            items.push({
+                                                ...item,
+                                                orderId: data.orderId || doc.id,
+                                                outletName: data.outletName || data.outletId,
+                                                outletId: data.outletId,
+                                                createdAt: data.createdAt
+                                            });
+                                        });
+                                    } catch (error) {
+                                        console.error(`Error fetching items for order ${doc.id}:`, error);
+                                        // Continue with other orders even if one fails
+                                    }
+                                }
                             }
-                        });
+                        }
 
                         this.deliveryItems = items;
                         this.totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -285,7 +309,7 @@
                                         ${this.groupedItems.map(item => `
                                             <tr>
                                                 ${isZh ? `<td>${item.chinese || ''}</td>` : `<td>${item.name}</td>`}
-                                                ${isZh ? `<td>${item.unit || ''}</td>` : `<td>${item.unitChinese}</td>`}
+                                                <td>${item.unit || item.unitChinese || item.UOM || ''}</td>
                                                 <td>${item.totalQuantity}</td>
                                             </tr>
                                         `).join('')}
