@@ -438,14 +438,14 @@
                         // Generate a unique order ID (using order number for better tracking)
                         const orderId = `ORD-${orderNumber}`;
                         
-                        // Prepare order object with the order number
+                        // Prepare order object with the order number (without items - they go in subcollection)
                         const orderDocument = {
                             id: orderId,
                             orderNumber: orderNumber,
                             outletId: outletId.value,           // Store outletId for filtering
                             outletName: outletName.value,
                             outletAddress: outletAddress.value,
-                            items: orderItems.value,
+                            // items: orderItems.value,  // REMOVED - items stored in subcollection
                             subTotal: subTotal.value,
                             gst: gst.value,
                             grandTotal: grandTotal.value,
@@ -455,9 +455,16 @@
                             createdAt: serverTimestamp()
                         };
                         
-                        // Save to the centralized orders collection
+                        // Save order metadata to the centralized orders collection (without items)
                         const orderRef = doc(collection(db, 'orders'), orderId);
                         await setDoc(orderRef, orderDocument);
+
+                        // Save each item to the order's subcollection
+                        const itemsCollectionRef = collection(db, 'orders', orderId, 'items');
+                        for (const item of orderItems.value) {
+                            const itemRef = doc(itemsCollectionRef); // auto-generated ID
+                            await setDoc(itemRef, item);
+                        }
 
                         // Deduct stock for each product in the order
                         for (const item of orderItems.value) {
