@@ -401,7 +401,7 @@
                     <!-- Order Items -->
                     <div class="details-section">
                         <h3>{{ t('orderItems') }}</h3>
-                        <div class="items-table-wrapper">
+                        <div v-if="selectedOrder.items && selectedOrder.items.length > 0" class="items-table-wrapper">
                         <table class="items-table">
                             <thead>
                                 <tr>
@@ -450,6 +450,9 @@
                                 </tr>
                             </tfoot>
                         </table>
+                        </div>
+                        <div v-else>
+                            <p>Loading items...</p>
                         </div>
                     </div>
                     
@@ -785,8 +788,9 @@
                         const loadedOrders = docs.slice(0, pageSize.value).map(doc => {
                             const data = doc.data();
                             let itemsCount = 0;
+                            // For backward compatibility, check if items exist in the main document
                             if (data.items) {
-                                itemsCount = Object.keys(data.items).length;
+                                itemsCount = Array.isArray(data.items) ? data.items.length : Object.keys(data.items).length;
                             }
                             return {
                                 id: doc.id,
@@ -801,7 +805,7 @@
                                 grandTotal: data.grandTotal || 0,
                                 subTotal: data.subTotal || 0,
                                 gst: 0.09, // Fixed GST at 9%
-                                items: data.items ? Object.values(data.items) : [],
+                                items: data.items ? (Array.isArray(data.items) ? data.items : Object.values(data.items)) : [],
                                 itemsCount: itemsCount,
                                 referenceNumber: data.referenceNumber,
                                 remarks: data.remarks
@@ -900,9 +904,28 @@
                 };
                 
                 // View order details
-                const viewOrderDetails = (order) => {
-                    selectedOrder.value = order;
-                    showModal.value = true;
+                const viewOrderDetails = async (order) => {
+                    try {
+                        // Fetch items from the subcollection
+                        const itemsCollectionRef = collection(db, 'orders', order.id, 'items');
+                        const itemsSnapshot = await getDocs(itemsCollectionRef);
+                        
+                        const items = [];
+                        itemsSnapshot.forEach(doc => {
+                            items.push(doc.data());
+                        });
+                        
+                        // Create a copy of the order with the fetched items
+                        selectedOrder.value = {
+                            ...order,
+                            items: items
+                        };
+                        
+                        showModal.value = true;
+                    } catch (error) {
+                        console.error('Error fetching order items:', error);
+                        alert('Failed to load order details: ' + error.message);
+                    }
                 };
                 
                 // Close modal
@@ -911,32 +934,41 @@
                     selectedOrder.value = null;
                 };
                 
-                // Download PDF with cutoff time logic
+                // Download PDF with delivery date logic
                 const downloadPDF = async () => {
                     if (!selectedOrder.value) return;
                     try {
                         const order = selectedOrder.value;
-                        const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
-                        const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes(); // Convert to minutes
-                        const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
-                        // Determine which date to use for invoice
-                        let invoiceDate = new Date(orderDate);
-                        if (orderTime > cutoffTime) {
-                            invoiceDate.setDate(invoiceDate.getDate() + 1);
+                        
+                        // Use deliveryDate for invoice generation
+                        let invoiceDate;
+                        if (order.deliveryDate) {
+                            // Parse the delivery date (assuming it's in YYYY-MM-DD format)
+                            invoiceDate = new Date(order.deliveryDate);
+                        } else {
+                            // Fallback to order creation date if deliveryDate is not available
+                            const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+                            const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes(); // Convert to minutes
+                            const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
+                            invoiceDate = new Date(orderDate);
+                            if (orderTime > cutoffTime) {
+                                invoiceDate.setDate(invoiceDate.getDate() + 1);
+                            }
                         }
-                        // Calculate the start and end for the invoice window
+                        
+                        // Calculate the start and end for the invoice window based on delivery date
                         const invoiceStart = new Date(invoiceDate);
                         invoiceStart.setDate(invoiceDate.getDate() - 1);
                         invoiceStart.setHours(16, 30, 0, 0); // Previous day 16:30
                         const invoiceEnd = new Date(invoiceDate);
                         invoiceEnd.setHours(16, 30, 0, 0); // Invoice day 16:30
+                        
                         // Fetch all orders for the same outlet in the invoice window
                         const ordersRef = collection(db, 'orders');
                         const q = query(
                             ordersRef,
                             where('outletId', '==', order.outletId),
-                            where('createdAt', '>', invoiceStart),
-                            where('createdAt', '<=', invoiceEnd),
+                            where('deliveryDate', '==', order.deliveryDate), // Use deliveryDate for filtering
                             where('status', 'in', ['processing', 'delivered'])
                         );
                         const snapshot = await getDocs(q);
@@ -950,7 +982,7 @@
                             });
                         });
                         if (relatedOrders.length === 0) {
-                            alert('No valid orders found for this date. Only processing and delivered orders can be included in invoices.');
+                            alert('No valid orders found for this delivery date. Only processing and delivered orders can be included in invoices.');
                             return;
                         }
                         // Find the highest order number (suffix) in the window
@@ -966,10 +998,10 @@
                                 maxOrderNum = num;
                             }
                         });
-                        // Format date as DDMMYYYY
+                        // Format delivery date as DDMMYYYY
                         const pad = n => n.toString().padStart(2, '0');
                         const dateStr = pad(invoiceDate.getDate()) + pad(invoiceDate.getMonth() + 1) + invoiceDate.getFullYear();
-                        // Invoice number: maxOrderNum + '/' + dateStr
+                        // Invoice number: maxOrderNum + '/' + dateStr (using delivery date)
                         const invoiceNumber = `${maxOrderNum || ''}/${dateStr}`;
                         
                         // Create document title with outlet prefix-suffix-invoice format
