@@ -178,23 +178,13 @@
                         for (const doc of deliveryOrdersSnapshot.docs) {
                             const data = doc.data();
                             
-                            // Check if items exist in the main document (for backward compatibility)
-                            if (data.items) {
-                                Object.values(data.items).forEach(item => {
-                                    items.push({
-                                        ...item,
-                                        orderId: data.orderId || doc.id,
-                                        outletName: data.outletName || data.outletId,
-                                        outletId: data.outletId,
-                                        createdAt: data.createdAt
-                                    });
-                                });
-                            } else {
-                                // Fetch items from subcollection
-                                try {
-                                    const itemsCollectionRef = collection(db, 'orders', doc.id, 'items');
-                                    const itemsSnapshot = await getDocs(itemsCollectionRef);
-                                    
+                            // Try to fetch items from subcollection first (new way)
+                            try {
+                                const itemsCollectionRef = collection(db, 'orders', doc.id, 'items');
+                                const itemsSnapshot = await getDocs(itemsCollectionRef);
+                                
+                                if (itemsSnapshot.size > 0) {
+                                    // Items found in subcollection
                                     itemsSnapshot.forEach(itemDoc => {
                                         const item = itemDoc.data();
                                         items.push({
@@ -205,9 +195,33 @@
                                             createdAt: data.createdAt
                                         });
                                     });
-                                } catch (error) {
-                                    console.error(`Error fetching items for order ${doc.id}:`, error);
-                                    // Continue with other orders even if one fails
+                                } else {
+                                    // No items in subcollection, try main document (old way)
+                                    if (data.items) {
+                                        Object.values(data.items).forEach(item => {
+                                            items.push({
+                                                ...item,
+                                                orderId: data.orderId || doc.id,
+                                                outletName: data.outletName || data.outletId,
+                                                outletId: data.outletId,
+                                                createdAt: data.createdAt
+                                            });
+                                        });
+                                    }
+                                }
+                            } catch (error) {
+                                console.error(`Error fetching items for order ${doc.id}:`, error);
+                                // Fallback to main document if subcollection fetch fails
+                                if (data.items) {
+                                    Object.values(data.items).forEach(item => {
+                                        items.push({
+                                            ...item,
+                                            orderId: data.orderId || doc.id,
+                                            outletName: data.outletName || data.outletId,
+                                            outletId: data.outletId,
+                                            createdAt: data.createdAt
+                                        });
+                                    });
                                 }
                             }
                         }
