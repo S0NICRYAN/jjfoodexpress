@@ -100,6 +100,26 @@
 
         /* Mobile-friendly quantity input styles */
         @media (max-width: 768px) {
+            /* Prevent double-tap zoom on mobile */
+            * {
+                touch-action: manipulation;
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            
+            /* Allow text selection in inputs */
+            input, textarea {
+                -webkit-user-select: text;
+                -khtml-user-select: text;
+                -moz-user-select: text;
+                -ms-user-select: text;
+                user-select: text;
+            }
+            
             .qty-input {
                 -webkit-appearance: none;
                 -moz-appearance: textfield;
