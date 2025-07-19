@@ -1021,9 +1021,15 @@
                         // Prepare items HTML with fixed widths
                         const combinedItems = {};
                         let totalSubtotal = 0;
-                        relatedOrders.forEach(order => {
-                            if (order.items) {
-                                Object.values(order.items).forEach(item => {
+                        
+                        // Fetch items from subcollections for all related orders
+                        for (const order of relatedOrders) {
+                            try {
+                                const itemsCollectionRef = collection(db, 'orders', order.id, 'items');
+                                const itemsSnapshot = await getDocs(itemsCollectionRef);
+                                
+                                itemsSnapshot.forEach(doc => {
+                                    const item = doc.data();
                                     const key = `${item.chinese || item.name}_${item.UOM || item.unit}`;
                                     if (!combinedItems[key]) {
                                         combinedItems[key] = {
@@ -1040,8 +1046,11 @@
                                     combinedItems[key].subtotal += item.subtotal;
                                     totalSubtotal += item.subtotal;
                                 });
+                            } catch (error) {
+                                console.error(`Error fetching items for order ${order.id}:`, error);
+                                // Continue with other orders even if one fails
                             }
-                        });
+                        }
                         const itemsArr = Object.values(combinedItems);
                         const tableHtml = `<table style='width:100%;border-collapse:collapse;margin-top:20px;border:1px solid #000;'>`
                             + `<thead><tr style='background-color:#f0f0f0;'>`
