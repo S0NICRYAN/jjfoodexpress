@@ -833,7 +833,7 @@
                                 {{ t('viewDetails') }}
                             </button>
                             <button 
-                                v-if="order.status !== 'delivered' && order.status !== 'cancelled'" 
+                                v-if="order.status === 'processing'" 
                                 class="order-details-button btn btn-delivered"
                                 @click="markAsDelivered(order)"
                                 :disabled="isUpdatingStatus"
