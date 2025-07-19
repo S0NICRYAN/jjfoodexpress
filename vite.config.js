@@ -26,7 +26,8 @@ export default defineConfig({
         order_management:'order_management.html',
         soa:'soa.html',
         product:'product.html',
-        delivery:'delivery.html'
+        delivery:'delivery.html',
+        migrate_images:'migrate_images.html'
       }
     }
   }
