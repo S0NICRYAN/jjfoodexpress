@@ -529,15 +529,22 @@
                 dailySummaries() {
                     const summaries = {};
                     this.orders.forEach(order => {
-                        // Get order time in minutes since midnight
-                        const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
-                        const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes();
-                        const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
-                        // If order is after 4:30 PM, use next day
-                        let effectiveDate = new Date(orderDate);
-                        if (orderTime > cutoffTime) {
-                            effectiveDate.setDate(effectiveDate.getDate() + 1);
+                        // Use delivery date if available, otherwise fall back to order creation date
+                        let effectiveDate;
+                        if (order.deliveryDate) {
+                            // Use delivery date directly
+                            effectiveDate = new Date(order.deliveryDate);
+                        } else {
+                            // Fallback to order creation date with cutoff time logic
+                            const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+                            const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes();
+                            const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
+                            effectiveDate = new Date(orderDate);
+                            if (orderTime > cutoffTime) {
+                                effectiveDate.setDate(effectiveDate.getDate() + 1);
+                            }
                         }
+                        
                         const dateKey = effectiveDate.toDateString();
                         if (!summaries[dateKey]) {
                             summaries[dateKey] = {
@@ -683,9 +690,13 @@
                             }
                         });
                         let invoiceNumberPrefix = maxOrderNum !== -1 ? maxOrderNum : '0001';
-                        // Use effective date of the max order for invoice number date part
+                        // Use delivery date for invoice number date part
                         let invoiceDate = summary.date;
-                        if (maxOrder && maxOrder.createdAt) {
+                        if (maxOrder && maxOrder.deliveryDate) {
+                            // Use delivery date if available
+                            invoiceDate = new Date(maxOrder.deliveryDate);
+                        } else if (maxOrder && maxOrder.createdAt) {
+                            // Fallback to order creation date with cutoff time logic
                             let d = maxOrder.createdAt.toDate ? maxOrder.createdAt.toDate() : new Date(maxOrder.createdAt);
                             const orderTime = d.getHours() * 60 + d.getMinutes();
                             const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
