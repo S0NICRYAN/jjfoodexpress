@@ -499,8 +499,8 @@
                                 UOM: item.UOM,
                                 quantity: item.orderQty,
                                 subtotal: roundToTwoDecimals(parseFloat(item.price || 0) * item.orderQty),
-                                // Use image URL instead of base64 data to reduce size
-                                image: item.image || '/logo.png',
+                                // Use imageUrl from Firebase Storage, fallback to image field, then default logo
+                                image: item.imageUrl || item.image || '/logo.png',
                                 stock: item.stock
                             };
                             
@@ -657,7 +657,7 @@
                 <!-- Product cards -->
                 <div v-else class="product-card" v-for="product in filteredProducts" :key="product.id">
                     <div class="product-image-container" @click="openZoomModal(product)">
-                        <img :src="product.imageData || product.image || '/logo.png'" :alt="product.name" class="product-image">
+                        <img :src="product.imageUrl || product.image || '/logo.png'" :alt="product.name" class="product-image">
                         <div class="zoom-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                                 <path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-1 0V7h-.5a.5.5 0 0 1-.5-.5z"/>

@@ -696,7 +696,7 @@
                                 <tr v-for="(item, index) in orderItems" :key="item.id">
                                     <td>
                                         <div class="product-info">
-                                            <img :src="item.image || '/logo.png'" :alt="item.name" class="product-image">
+                                            <img :src="item.imageUrl || item.image || '/logo.png'" :alt="item.name" class="product-image">
                                             <div class="product-details">
                                                 <h3>{{ item.name }}</h3>
                                                 <p>{{ item.chinese }}</p>
