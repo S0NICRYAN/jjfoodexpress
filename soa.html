@@ -556,7 +556,8 @@
                             };
                         }
                         summaries[dateKey].orderCount++;
-                        summaries[dateKey].totalItems += order.items ? order.items.length : 0;
+                        // Use itemsCount property that was calculated in fetchOrders
+                        summaries[dateKey].totalItems += order.itemsCount || 0;
                         summaries[dateKey].dailyAmount += order.grandTotal || 0;
                         summaries[dateKey].orders.push(order);
                     });
@@ -606,6 +607,22 @@
                                     (order.status === 'processing' || order.status === 'delivered')
                                 );
                             });
+                        
+                        // Count items from subcollections for orders that don't have items in main document
+                        for (const order of this.orders) {
+                            if (!order.items) {
+                                try {
+                                    const itemsCollectionRef = collection(db, 'orders', order.id, 'items');
+                                    const itemsSnapshot = await getDocs(itemsCollectionRef);
+                                    order.itemsCount = itemsSnapshot.size;
+                                } catch (error) {
+                                    console.error(`Error counting items for order ${order.id}:`, error);
+                                    order.itemsCount = 0;
+                                }
+                            } else {
+                                order.itemsCount = Array.isArray(order.items) ? order.items.length : Object.keys(order.items).length;
+                            }
+                        }
                     } finally {
                         this.isLoadingOrders = false;
                     }
