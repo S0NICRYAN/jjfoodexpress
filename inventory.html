@@ -173,14 +173,21 @@
             getStorage,
             ref,
             uploadBytes,
-            getDownloadURL,
-            deleteObject
+            getDownloadURL
         } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        const storage = getStorage(app);
+        
+        // Initialize storage with error handling
+        let storage;
+        try {
+            storage = getStorage(app);
+        } catch (error) {
+            console.error('Firebase Storage initialization failed:', error);
+            storage = null;
+        }
 
         const { createApp, ref, computed, onMounted } = Vue;
         createApp({
@@ -227,7 +234,7 @@
                     uom: { zh: '计量单位', en: 'UOM (Unit of Measurement)' },
                     stock: { zh: '库存', en: 'Stock' },
                     productImage: { zh: '产品图片:', en: 'Product Image:' },
-                    imageSizeInfo: { zh: '* 图片大小必须小于 1MB', en: '* Images must be under 1MB in size' },
+                    imageSizeInfo: { zh: '* 图片大小必须小于 5MB', en: '* Images must be under 5MB in size' },
                     noImageSelected: { zh: '未选择图片', en: 'No image selected' },
                     saving: { zh: '保存中...', en: 'Saving...' },
                     updateProduct: { zh: '更新产品', en: 'Update Product' },
@@ -337,11 +344,20 @@
                         let imageUrl = '';
                         
                         // Upload image to Firebase Storage if a new image is selected
-                        if (imageFile.value) {
-                            const productId = isEditing.value ? editingProductId.value : Date.now().toString();
-                            const imageRef = ref(storage, `products/${productId}.jpg`);
-                            await uploadBytes(imageRef, imageFile.value);
-                            imageUrl = await getDownloadURL(imageRef);
+                        if (imageFile.value && storage) {
+                            try {
+                                const productId = isEditing.value ? editingProductId.value : Date.now().toString();
+                                const imageRef = ref(storage, `products/${productId}.jpg`);
+                                await uploadBytes(imageRef, imageFile.value);
+                                imageUrl = await getDownloadURL(imageRef);
+                            } catch (uploadError) {
+                                console.error('Image upload failed:', uploadError);
+                                message.value = { type: 'error', text: 'Image upload failed. Please try again.' };
+                                isSubmitting.value = false;
+                                return;
+                            }
+                        } else if (imageFile.value && !storage) {
+                            console.warn('Firebase Storage not available, skipping image upload');
                         }
                         
                         const data = {
