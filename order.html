@@ -255,7 +255,7 @@
                 
                 const openZoomModal = (product) => {
                     zoomedImage.value = {
-                        src: product.imageData || product.image || '/logo.png',
+                        src: product.imageUrl || product.image || '/logo.png',
                         alt: product.name,
                         name: product.name
                     };
