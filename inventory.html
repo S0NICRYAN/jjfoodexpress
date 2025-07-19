@@ -126,7 +126,7 @@
                         <tbody>
                             <tr v-for="product in filteredProducts" :key="product.id">
                                 <td>
-                                    <img :src="product.imageData || product.image || '/logo.png'" :alt="product.name" class="table-image">
+                                    <img :src="product.imageUrl || product.image || '/logo.png'" :alt="product.name" class="table-image">
                                 </td>
                                 <td>{{ product.name }}</td>
                                 <td>{{ product.cname }}</td>
@@ -169,10 +169,18 @@
             onAuthStateChanged,
             signOut
         } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import {
+            getStorage,
+            ref,
+            uploadBytes,
+            getDownloadURL,
+            deleteObject
+        } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+        const storage = getStorage(app);
 
         const { createApp, ref, computed, onMounted } = Vue;
         createApp({
@@ -194,7 +202,6 @@
                 const productStock = ref(1);
                 const imageFile = ref(null);
                 const imagePreview = ref('');
-                const imageData = ref('');
                 const editingProductId = ref(null);
                 const unitOptions = ref([
                     '包 (PACK)',
@@ -286,14 +293,18 @@
                         message.value = { type: 'error', text: t('noImageSelected') };
                         return;
                     }
-                    if (file.size > 1 * 1024 * 1024) {
+                    if (file.size > 5 * 1024 * 1024) { // Increased to 5MB for better quality
                         message.value = { type: 'error', text: t('imageSizeInfo') };
                         return;
                     }
+                    
+                    // Store the file for later upload
+                    imageFile.value = file;
+                    
+                    // Create preview
                     const reader = new FileReader();
                     reader.onload = e => {
                         imagePreview.value = e.target.result;
-                        imageData.value = e.target.result;
                     };
                     reader.readAsDataURL(file);
                 };
@@ -321,16 +332,33 @@
                         return;
                     }
                     isSubmitting.value = true;
-                    const data = {
-                        name: productName.value,
-                        cname: productChineseName.value,
-                        price: parseFloat(productPrice.value) || 0,
-                        unit: extractChinesePart(productUnit.value), // Only Chinese part
-                        UOM: productUOM.value,
-                        stock: parseInt(productStock.value, 10) || 0,
-                        imageData: imageData.value
-                    };
+                    
                     try {
+                        let imageUrl = '';
+                        
+                        // Upload image to Firebase Storage if a new image is selected
+                        if (imageFile.value) {
+                            const productId = isEditing.value ? editingProductId.value : Date.now().toString();
+                            const imageRef = ref(storage, `products/${productId}.jpg`);
+                            await uploadBytes(imageRef, imageFile.value);
+                            imageUrl = await getDownloadURL(imageRef);
+                        }
+                        
+                        const data = {
+                            name: productName.value,
+                            cname: productChineseName.value,
+                            price: parseFloat(productPrice.value) || 0,
+                            unit: extractChinesePart(productUnit.value), // Only Chinese part
+                            UOM: productUOM.value,
+                            stock: parseInt(productStock.value, 10) || 0,
+                            imageUrl: imageUrl || (isEditing.value ? undefined : '') // Only set if new image uploaded
+                        };
+                        
+                        // Remove undefined fields to avoid overwriting existing data
+                        Object.keys(data).forEach(key => {
+                            if (data[key] === undefined) delete data[key];
+                        });
+                        
                         if (isEditing.value && editingProductId.value) {
                             await updateDoc(doc(db, 'products', editingProductId.value), data);
                             message.value = { type: 'success', text: t('updateProduct') };
@@ -341,6 +369,7 @@
                         resetForm();
                         fetchProducts();
                     } catch (e) {
+                        console.error('Error saving product:', e);
                         message.value = { type: 'error', text: t('saving') };
                     }
                     isSubmitting.value = false;
@@ -356,8 +385,8 @@
                     productUnit.value = matchingUnit || product.unit || '包 (PACK)';
                     productUOM.value = product.UOM;
                     productStock.value = product.stock;
-                    imagePreview.value = product.imageData || product.image || '';
-                    imageData.value = product.imageData || '';
+                    imagePreview.value = product.imageUrl || product.image || '';
+                    imageFile.value = null; // Clear any selected file
                     
                     // Scroll to the form
                     document.getElementById('product-form').scrollIntoView({ behavior: 'smooth' });
@@ -378,7 +407,6 @@
                     productStock.value = 1;
                     imageFile.value = null;
                     imagePreview.value = '';
-                    imageData.value = '';
                 };
                 const filteredProducts = computed(() => {
                     let filtered = products.value;
@@ -416,7 +444,6 @@
                     productStock,
                     imageFile,
                     imagePreview,
-                    imageData,
                     editingProductId,
                     unitOptions,
                     currentLang,
