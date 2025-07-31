@@ -395,13 +395,25 @@
                 };
             },
             computed: {
+                // Get prefix from outlet code (everything before the dash)
+                getPrefix(code) {
+                    if (!code) return '';
+                    const dashIndex = code.indexOf('-');
+                    return dashIndex > 0 ? code.substring(0, dashIndex) : code;
+                },
                 outletPrefixes() {
-                    const prefixes = [...new Set(this.outlets.map(outlet => outlet.prefix))];
-                    return prefixes.sort();
+                    const prefixes = new Set();
+                    this.outlets.forEach(outlet => {
+                        const prefix = this.getPrefix(outlet.id);
+                        if (prefix) {
+                            prefixes.add(prefix);
+                        }
+                    });
+                    return Array.from(prefixes).sort();
                 },
                 filteredOutlets() {
                     if (!this.selectedPrefix) return [];
-                    return this.outlets.filter(outlet => outlet.prefix === this.selectedPrefix);
+                    return this.outlets.filter(outlet => this.getPrefix(outlet.id) === this.selectedPrefix);
                 }
             },
             methods: {
@@ -414,7 +426,12 @@
                 updateTime() {
                     const now = new Date();
                     this.currentTime = now.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
-                    this.currentDate = now.toLocaleDateString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                    
+                    // Format date as dd/mm/yyyy
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const year = now.getFullYear();
+                    this.currentDate = `${day}/${month}/${year}`;
                 },
                 async fetchOutlets() {
                     try {
