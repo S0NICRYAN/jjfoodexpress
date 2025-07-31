@@ -518,11 +518,10 @@
                     this.message = null;
                     
                     try {
-                        // Get Singapore time
+                        // Get Singapore time - use the same logic as the live display
                         const now = new Date();
-                        const singaporeTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}));
-                        const dateString = singaporeTime.toLocaleDateString('en-CA', {timeZone: "Asia/Singapore"}); // YYYY-MM-DD format
-                        const timeString = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US', {timeZone: "Asia/Singapore"});
+                        const dateString = this.currentDate; // Store in DD/MM/YYYY format
+                        const timeString = this.currentTime;
                         
                         // Get outlet details
                         const selectedOutletData = this.outlets.find(o => o.id === this.selectedOutlet);

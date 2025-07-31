@@ -758,13 +758,19 @@
                         const datesToCheck = [];
                         
                         if (this.selectedEmployeeDate) {
-                            datesToCheck.push(this.selectedEmployeeDate);
+                            // Convert YYYY-MM-DD to DD/MM/YYYY format for Firebase query
+                            const [year, month, day] = this.selectedEmployeeDate.split('-');
+                            const formattedDate = `${day}/${month}/${year}`;
+                            datesToCheck.push(formattedDate);
                         } else {
                             // Generate last 30 days if no specific date selected
                             for (let i = 0; i < 30; i++) {
                                 const date = new Date();
                                 date.setDate(date.getDate() - i);
-                                datesToCheck.push(date.toISOString().split('T')[0]);
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = date.getFullYear();
+                                datesToCheck.push(`${day}/${month}/${year}`);
                             }
                         }
                         
@@ -781,16 +787,17 @@
                                 console.log('Record employee name:', data.employeeName);
                                 console.log('Match?', data.employeeName === this.selectedEmployee);
                                 
-                                if (data.employeeName === this.selectedEmployee) {
+                                                                if (data.employeeName === this.selectedEmployee) {
                                     // Use the correct field names based on the type
                                     const timeField = data.type === 'clockIn' ? 'clockInTime' : 'clockOutTime';
-                                                                            attendanceRecords.push({
-                                            id: doc.id,
-                                            ...data,
-                                            clockTime: data[timeField], // Map to clockTime for display
-                                            clockDate: data.clockInDate, // Use the correct date field
-                                            outletName: this.outlets.find(o => o.id === this.selectedEmployeeOutlet)?.name || this.selectedEmployeeOutlet
-                                        });
+                                    const dateField = data.type === 'clockIn' ? 'clockInDate' : 'clockOutDate';
+                                    attendanceRecords.push({
+                                        id: doc.id,
+                                        ...data,
+                                        clockTime: data[timeField], // Map to clockTime for display
+                                        clockDate: data[dateField] || data.clockInDate, // Use the correct date field
+                                        outletName: this.outlets.find(o => o.id === this.selectedEmployeeOutlet)?.name || this.selectedEmployeeOutlet
+                                    });
                                 }
                             });
                             } catch (error) {
@@ -801,11 +808,15 @@
                         // Filter by date if selected
                         let filteredRecords = attendanceRecords;
                         if (this.selectedEmployeeDate) {
-                            console.log('Filtering by date:', this.selectedEmployeeDate);
+                            // Convert selected date to DD/MM/YYYY format for comparison
+                            const [year, month, day] = this.selectedEmployeeDate.split('-');
+                            const formattedSelectedDate = `${day}/${month}/${year}`;
+                            
+                            console.log('Filtering by date:', formattedSelectedDate);
                             console.log('Available records:', attendanceRecords.map(r => ({ date: r.clockDate, employee: r.employeeName })));
                             filteredRecords = attendanceRecords.filter(record => {
-                                const matches = record.clockDate === this.selectedEmployeeDate;
-                                console.log(`Record date: ${record.clockDate}, Selected date: ${this.selectedEmployeeDate}, Matches: ${matches}`);
+                                const matches = record.clockDate === formattedSelectedDate;
+                                console.log(`Record date: ${record.clockDate}, Selected date: ${formattedSelectedDate}, Matches: ${matches}`);
                                 return matches;
                             });
                         }
