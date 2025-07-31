@@ -528,11 +528,18 @@
                         // Create attendance record
                         const attendanceData = {
                             employeeName: this.employeeName.trim(),
-                            clockInTime: timeString,
-                            clockInDate: dateString,
                             type: actionType,
                             timestamp: serverTimestamp()
                         };
+                        
+                        // Add the appropriate time and date fields based on action type
+                        if (actionType === 'clockIn') {
+                            attendanceData.clockInTime = timeString;
+                            attendanceData.clockInDate = dateString;
+                        } else {
+                            attendanceData.clockOutTime = timeString;
+                            attendanceData.clockOutDate = dateString;
+                        }
                         
                         // Add to attendance collection - all clock-ins for same outlet and date go under same collection
                         const attendanceRef = collection(db, `attendance/${this.selectedOutlet}/${dateString}`);
