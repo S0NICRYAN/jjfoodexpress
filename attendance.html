@@ -468,13 +468,16 @@
                     return this.translations[this.currentLang][key] || key;
                 },
                 updateTime() {
+                    // Get Singapore time explicitly
                     const now = new Date();
-                    this.currentTime = now.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                    const singaporeTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}));
                     
-                    // Format date as dd/mm/yyyy
-                    const day = String(now.getDate()).padStart(2, '0');
-                    const month = String(now.getMonth() + 1).padStart(2, '0');
-                    const year = now.getFullYear();
+                    this.currentTime = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                    
+                    // Format date as dd/mm/yyyy using Singapore time
+                    const day = String(singaporeTime.getDate()).padStart(2, '0');
+                    const month = String(singaporeTime.getMonth() + 1).padStart(2, '0');
+                    const year = singaporeTime.getFullYear();
                     this.currentDate = `${day}/${month}/${year}`;
                 },
                 async fetchOutlets() {
@@ -518,15 +521,23 @@
                     this.message = null;
                     
                     try {
-                        // Get Singapore time - use the same logic as the live display
+                        // Get Singapore time explicitly
                         const now = new Date();
-                        const dateString = this.currentDate; // Store in DD/MM/YYYY format
+                        const singaporeTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}));
                         const timeString = this.currentTime;
+                        
+                        // Format date as DD/MM/YYYY using Singapore time
+                        const day = String(singaporeTime.getDate()).padStart(2, '0');
+                        const month = String(singaporeTime.getMonth() + 1).padStart(2, '0');
+                        const year = singaporeTime.getFullYear();
+                        const dateString = `${day}/${month}/${year}`;
                         
                         // Get outlet details
                         const selectedOutletData = this.outlets.find(o => o.id === this.selectedOutlet);
                         
                         const actionType = this.currentEmployeeStatus === 'in' ? 'clockOut' : 'clockIn';
+                        console.log('Current employee status:', this.currentEmployeeStatus);
+                        console.log('Action type:', actionType);
                         
                         // Create attendance record
                         const attendanceData = {
@@ -555,12 +566,17 @@
                             await updateDoc(employeeRef, {
                                 status: this.currentEmployeeStatus === 'in' ? 'out' : 'in'
                             });
+                            
+                            // Update local employee status
+                            employee.status = this.currentEmployeeStatus === 'in' ? 'out' : 'in';
                         }
                         
-                        // Format time for display
+                        // Format time for display using Singapore time
                         const displayTime = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                        console.log('Message key:', actionType === 'clockIn' ? 'successMessageClockIn' : 'successMessageClockOut');
                         const messageKey = actionType === 'clockIn' ? 'successMessageClockIn' : 'successMessageClockOut';
                         const successMessage = this.t(messageKey).replace('{time}', displayTime);
+                        console.log('Success message:', successMessage);
                         this.showMessage(successMessage, 'success');
                         this.resetForm();
                         
