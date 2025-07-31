@@ -342,6 +342,7 @@
                         id="employeeName" 
                         class="form-control" 
                         v-model="employeeName"
+                        @change="onEmployeeChange"
                         :class="{ error: errors.employeeName }"
                         :disabled="!selectedOutlet || employees.length === 0"
                     >
@@ -359,7 +360,7 @@
                     :disabled="isSubmitting || !employeeName || !selectedOutlet"
                 >
                     <span v-if="isSubmitting" class="loading"></span>
-                    {{ isSubmitting ? t('submitting') : t('clockIn') }}
+                    {{ isSubmitting ? t('submitting') : (currentEmployeeStatus === 'in' ? t('clockOut') : t('clockIn')) }}
                 </button>
             </form>
         </div>
@@ -368,7 +369,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         import { firebaseConfig } from './secrets.js';
 
         // Initialize Firebase
@@ -388,6 +389,7 @@
                     employees: [],
                     isSubmitting: false,
                     isLoading: true,
+                    currentEmployeeStatus: 'out',
                     message: null,
                     errors: {},
                     currentTime: '',
@@ -404,6 +406,7 @@
                             selectOutlet: '选择门店',
                             selectOutletPlaceholder: '请选择门店',
                             clockIn: '打卡上班',
+                            clockOut: '打卡下班',
                             submitting: '提交中...',
                             successMessage: '打卡成功！',
                             successMessageWithTime: '打卡成功！打卡时间：{time}',
@@ -423,6 +426,7 @@
                             selectOutlet: 'Select Outlet',
                             selectOutletPlaceholder: 'Please select an outlet',
                             clockIn: 'Clock In',
+                            clockOut: 'Clock Out',
                             submitting: 'Submitting...',
                             successMessage: 'Clock in successful!',
                             successMessageWithTime: 'Clock in successful! Clocked in at {time}',
@@ -517,12 +521,14 @@
                         // Get outlet details
                         const selectedOutletData = this.outlets.find(o => o.id === this.selectedOutlet);
                         
+                        const actionType = this.currentEmployeeStatus === 'in' ? 'clockOut' : 'clockIn';
+                        
                         // Create attendance record
                         const attendanceData = {
                             employeeName: this.employeeName.trim(),
-                            clockInTime: timeString,
-                            clockInDate: dateString,
-                            type: 'clockIn',
+                            clockTime: timeString,
+                            clockDate: dateString,
+                            type: actionType,
                             timestamp: serverTimestamp()
                         };
                         
@@ -530,9 +536,18 @@
                         const attendanceRef = collection(db, `attendance/${this.selectedOutlet}/${dateString}`);
                         await addDoc(attendanceRef, attendanceData);
                         
+                        // Update employee status in the employees collection
+                        const employee = this.employees.find(emp => emp.name === this.employeeName);
+                        if (employee) {
+                            const employeeRef = doc(db, `outlets/${this.selectedOutlet}/employees`, employee.id);
+                            await updateDoc(employeeRef, {
+                                status: this.currentEmployeeStatus === 'in' ? 'out' : 'in'
+                            });
+                        }
+                        
                         // Format time for display
                         const displayTime = now.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
-                        const successMessage = this.t('successMessageWithTime').replace('{time}', displayTime);
+                        const successMessage = this.t('successMessageWithTime').replace('{time}', displayTime).replace('clock in', actionType === 'clockIn' ? 'clock in' : 'clock out');
                         this.showMessage(successMessage, 'success');
                         this.resetForm();
                         
@@ -578,6 +593,7 @@
                     } else {
                         this.employees = [];
                         this.employeeName = '';
+                        this.currentEmployeeStatus = 'out';
                     }
                 },
                 async fetchEmployees() {
@@ -601,6 +617,26 @@
                     } catch (error) {
                         console.error('Error fetching employees:', error);
                         this.employees = [];
+                    }
+                },
+                onEmployeeChange() {
+                    if (this.employeeName) {
+                        this.checkEmployeeStatus();
+                    } else {
+                        this.currentEmployeeStatus = 'out';
+                    }
+                },
+                async checkEmployeeStatus() {
+                    try {
+                        // Find the employee document to get their current status
+                        const employee = this.employees.find(emp => emp.name === this.employeeName);
+                        if (employee) {
+                            this.currentEmployeeStatus = employee.status || 'out';
+                            console.log('Employee status:', this.currentEmployeeStatus);
+                        }
+                    } catch (error) {
+                        console.error('Error checking employee status:', error);
+                        this.currentEmployeeStatus = 'out';
                     }
                 },
                 async initializeApp() {
