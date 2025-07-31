@@ -410,6 +410,8 @@
                             submitting: '提交中...',
                             successMessage: '打卡成功！',
                             successMessageWithTime: '打卡成功！打卡时间：{time}',
+                            successMessageClockIn: '打卡成功！上班时间：{time}',
+                            successMessageClockOut: '打卡成功！下班时间：{time}',
                             errorMessage: '打卡失败，请重试。',
                             nameRequired: '请输入员工姓名',
                             outletRequired: '请选择门店',
@@ -430,6 +432,8 @@
                             submitting: 'Submitting...',
                             successMessage: 'Clock in successful!',
                             successMessageWithTime: 'Clock in successful! Clocked in at {time}',
+                            successMessageClockIn: 'Clock in successful! Clocked in at {time}',
+                            successMessageClockOut: 'Clock out successful! Clocked out at {time}',
                             errorMessage: 'Clock in failed, please try again.',
                             nameRequired: 'Please enter employee name',
                             outletRequired: 'Please select an outlet',
@@ -556,7 +560,8 @@
                         
                         // Format time for display
                         const displayTime = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
-                        const successMessage = this.t('successMessageWithTime').replace('{time}', displayTime).replace('clock in', actionType === 'clockIn' ? 'clock in' : 'clock out');
+                        const messageKey = actionType === 'clockIn' ? 'successMessageClockIn' : 'successMessageClockOut';
+                        const successMessage = this.t(messageKey).replace('{time}', displayTime);
                         this.showMessage(successMessage, 'success');
                         this.resetForm();
                         
