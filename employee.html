@@ -750,31 +750,31 @@
                     this.employeeAttendance = [];
                     
                     try {
-                        // Get all attendance records for this employee across all outlets
+                        // Get all attendance records for this employee from the selected outlet
                         const attendanceRecords = [];
                         
-                        // Search through all outlets
-                        for (const outlet of this.outlets) {
-                            try {
-                                const attendanceRef = collection(db, `attendance/${outlet.id}`);
-                                const querySnapshot = await getDocs(attendanceRef);
-                                
-                                querySnapshot.docs.forEach(doc => {
-                                    const data = doc.data();
-                                    if (data.employeeName === this.selectedEmployee) {
-                                        // Use the correct field names based on the type
-                                        const timeField = data.type === 'clockIn' ? 'clockInTime' : 'clockOutTime';
-                                        attendanceRecords.push({
-                                            id: doc.id,
-                                            ...data,
-                                            clockTime: data[timeField], // Map to clockTime for display
-                                            outletName: outlet.name
-                                        });
-                                    }
-                                });
-                            } catch (error) {
-                                console.error(`Error loading attendance for outlet ${outlet.id}:`, error);
-                            }
+                        // Get all dates for the selected outlet
+                        const outletAttendanceRef = collection(db, `attendance/${this.selectedEmployeeOutlet}`);
+                        const outletQuerySnapshot = await getDocs(outletAttendanceRef);
+                        
+                        // For each date collection, search for the employee
+                        for (const dateDoc of outletQuerySnapshot.docs) {
+                            const dateCollectionRef = collection(db, `attendance/${this.selectedEmployeeOutlet}/${dateDoc.id}`);
+                            const dateQuerySnapshot = await getDocs(dateCollectionRef);
+                            
+                            dateQuerySnapshot.docs.forEach(doc => {
+                                const data = doc.data();
+                                if (data.employeeName === this.selectedEmployee) {
+                                    // Use the correct field names based on the type
+                                    const timeField = data.type === 'clockIn' ? 'clockInTime' : 'clockOutTime';
+                                    attendanceRecords.push({
+                                        id: doc.id,
+                                        ...data,
+                                        clockTime: data[timeField], // Map to clockTime for display
+                                        outletName: this.outlets.find(o => o.id === this.selectedEmployeeOutlet)?.name || this.selectedEmployeeOutlet
+                                    });
+                                }
+                            });
                         }
                         
                         // Filter by date if selected
