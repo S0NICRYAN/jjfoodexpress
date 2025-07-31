@@ -526,11 +526,11 @@
                         const singaporeTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}));
                         const timeString = this.currentTime;
                         
-                        // Format date as DD/MM/YYYY using Singapore time
+                        // Format date as DD-MM-YYYY using Singapore time for collection path
                         const day = String(singaporeTime.getDate()).padStart(2, '0');
                         const month = String(singaporeTime.getMonth() + 1).padStart(2, '0');
                         const year = singaporeTime.getFullYear();
-                        const dateString = `${day}/${month}/${year}`;
+                        const dateString = `${day}-${month}-${year}`;
                         
                         // Get outlet details
                         const selectedOutletData = this.outlets.find(o => o.id === this.selectedOutlet);
