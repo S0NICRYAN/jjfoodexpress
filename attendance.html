@@ -395,25 +395,18 @@
                 };
             },
             computed: {
-                // Get prefix from outlet code (everything before the dash)
-                getPrefix(code) {
-                    if (!code) return '';
-                    const dashIndex = code.indexOf('-');
-                    return dashIndex > 0 ? code.substring(0, dashIndex) : code;
-                },
                 outletPrefixes() {
-                    const prefixes = new Set();
+                    // Get unique prefixes from outlet IDs (before '-')
+                    const set = new Set();
                     this.outlets.forEach(outlet => {
-                        const prefix = this.getPrefix(outlet.id);
-                        if (prefix) {
-                            prefixes.add(prefix);
-                        }
+                        const dashIdx = outlet.id.indexOf('-');
+                        if (dashIdx > 0) set.add(outlet.id.substring(0, dashIdx));
                     });
-                    return Array.from(prefixes).sort();
+                    return Array.from(set).sort();
                 },
                 filteredOutlets() {
                     if (!this.selectedPrefix) return [];
-                    return this.outlets.filter(outlet => this.getPrefix(outlet.id) === this.selectedPrefix);
+                    return this.outlets.filter(outlet => outlet.id.startsWith(this.selectedPrefix + '-'));
                 }
             },
             methods: {
