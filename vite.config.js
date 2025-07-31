@@ -27,7 +27,8 @@ export default defineConfig({
         soa:'soa.html',
         product:'product.html',
         delivery:'delivery.html',
-        migrate_images:'migrate_images.html'
+        migrate_images:'migrate_images.html',
+        attendance:'attendance.html'
       }
     }
   }
