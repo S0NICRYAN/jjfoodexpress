@@ -727,10 +727,10 @@
                             }
                             
                             if (data.type === 'clockIn') {
-                                employeeRecords[employeeName].clockInTime = data.clockTime;
+                                employeeRecords[employeeName].clockInTime = data.clockInTime;
                                 employeeRecords[employeeName].currentStatus = 'in';
                             } else if (data.type === 'clockOut') {
-                                employeeRecords[employeeName].clockOutTime = data.clockTime;
+                                employeeRecords[employeeName].clockOutTime = data.clockOutTime;
                                 employeeRecords[employeeName].currentStatus = 'out';
                             }
                         });
@@ -762,9 +762,12 @@
                                 querySnapshot.docs.forEach(doc => {
                                     const data = doc.data();
                                     if (data.employeeName === this.selectedEmployee) {
+                                        // Use the correct field names based on the type
+                                        const timeField = data.type === 'clockIn' ? 'clockInTime' : 'clockOutTime';
                                         attendanceRecords.push({
                                             id: doc.id,
                                             ...data,
+                                            clockTime: data[timeField], // Map to clockTime for display
                                             outletName: outlet.name
                                         });
                                     }
