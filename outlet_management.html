@@ -248,7 +248,7 @@
                 
                 <!-- Employee Management Modal -->
                 <div v-if="showEmployeeModal" class="modal-overlay" @click="closeEmployeeModal">
-                    <div class="modal-content">
+                    <div class="modal-content" @click.stop>
                         <div class="modal-header">
                             <h3>{{ t('manageEmployees') }} - {{ selectedOutletForEmployees?.name }}</h3>
                             <button class="close-btn" @click="closeEmployeeModal">&times;</button>
