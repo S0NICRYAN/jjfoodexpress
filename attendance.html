@@ -213,6 +213,31 @@
             }
         }
         
+        /* Loading Container */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a3c6e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        .loading-container p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
         /* Time Display */
         .time-display {
             text-align: center;
@@ -250,7 +275,14 @@
     </header>
 
     <div class="container">
-        <div class="attendance-card">
+        <!-- Loading State -->
+        <div v-if="isLoading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>{{ t('loading') }}</p>
+        </div>
+
+        <!-- Main Content -->
+        <div v-else class="attendance-card">
             <div class="card-header">
                 <h1>{{ t('attendanceTitle') }}</h1>
                 <p>{{ t('attendanceSubtitle') }}</p>
@@ -355,6 +387,7 @@
                     outlets: [],
                     employees: [],
                     isSubmitting: false,
+                    isLoading: true,
                     message: null,
                     errors: {},
                     currentTime: '',
@@ -377,7 +410,8 @@
                             errorMessage: '打卡失败，请重试。',
                             nameRequired: '请输入员工姓名',
                             outletRequired: '请选择门店',
-                            prefixRequired: '请选择门店前缀'
+                            prefixRequired: '请选择门店前缀',
+                            loading: '加载中...'
                         },
                         en: {
                             attendanceTitle: 'Employee Attendance System',
@@ -395,7 +429,8 @@
                             errorMessage: 'Clock in failed, please try again.',
                             nameRequired: 'Please enter employee name',
                             outletRequired: 'Please select an outlet',
-                            prefixRequired: 'Please select outlet prefix'
+                            prefixRequired: 'Please select outlet prefix',
+                            loading: 'Loading...'
                         }
                     }
                 };
@@ -520,21 +555,25 @@
                     this.employees = [];
                     this.errors = {};
                 },
-                onPrefixChange() {
+                async onPrefixChange() {
+                    console.log('Prefix changed to:', this.selectedPrefix);
                     // Auto-select the first available outlet when prefix changes
                     if (this.selectedPrefix && this.filteredOutlets.length > 0) {
                         this.selectedOutlet = this.filteredOutlets[0].id;
+                        console.log('Auto-selected outlet:', this.selectedOutlet);
+                        // Trigger outlet change to fetch employees
+                        await this.onOutletChange();
                     } else {
                         this.selectedOutlet = '';
+                        this.employees = [];
+                        this.employeeName = '';
                     }
-                    // Clear employees when prefix changes
-                    this.employees = [];
-                    this.employeeName = '';
                 },
-                onOutletChange() {
+                async onOutletChange() {
+                    console.log('Outlet changed to:', this.selectedOutlet);
                     // Fetch employees for the selected outlet
                     if (this.selectedOutlet) {
-                        this.fetchEmployees();
+                        await this.fetchEmployees();
                     } else {
                         this.employees = [];
                         this.employeeName = '';
@@ -542,23 +581,41 @@
                 },
                 async fetchEmployees() {
                     try {
+                        console.log('Fetching employees for outlet:', this.selectedOutlet);
                         const employeesRef = collection(db, `outlets/${this.selectedOutlet}/employees`);
+                        console.log('Employees collection path:', `outlets/${this.selectedOutlet}/employees`);
                         const querySnapshot = await getDocs(employeesRef);
-                        this.employees = querySnapshot.docs.map(doc => ({
-                            id: doc.id,
-                            name: doc.data().name || doc.id
-                        }));
-                        console.log('Fetched employees:', this.employees);
+                        console.log('Query snapshot:', querySnapshot);
+                        console.log('Number of employees found:', querySnapshot.docs.length);
+                        
+                        this.employees = querySnapshot.docs.map(doc => {
+                            const employeeData = {
+                                id: doc.id,
+                                name: doc.data().name || doc.id
+                            };
+                            console.log('Employee data:', employeeData);
+                            return employeeData;
+                        });
+                        console.log('Final employees array:', this.employees);
                     } catch (error) {
                         console.error('Error fetching employees:', error);
                         this.employees = [];
                     }
+                },
+                async initializeApp() {
+                    try {
+                        await this.fetchOutlets();
+                        this.updateTime();
+                        this.timeInterval = setInterval(this.updateTime, 1000);
+                        this.isLoading = false;
+                    } catch (error) {
+                        console.error('Error initializing app:', error);
+                        this.isLoading = false;
+                    }
                 }
             },
             mounted() {
-                this.fetchOutlets();
-                this.updateTime();
-                this.timeInterval = setInterval(this.updateTime, 1000);
+                this.initializeApp();
             },
             beforeUnmount() {
                 if (this.timeInterval) {
