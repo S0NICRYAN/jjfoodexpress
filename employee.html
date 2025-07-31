@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JJ Food Express - Employee Attendance Management</title>
+    <style>
+        /* Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.5;
+            height: 100vh;
+        }
+        
+        /* Header */
+        header {
+            background-color: #1a3c6e;
+            color: white;
+            padding: 10px 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .logo img {
+            margin-right: 10px;
+            height: 50px;
+        }
+        
+        .language-toggle {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .language-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .card-header h1 {
+            color: #1a3c6e;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .card-header p {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        /* Tab System */
+        .tab-container {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 30px;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            color: #1a3c6e;
+            border-bottom-color: #1a3c6e;
+        }
+        
+        .tab:hover {
+            color: #1a3c6e;
+        }
+        
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            background-color: white;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #1a3c6e;
+            box-shadow: 0 0 0 3px rgba(26, 60, 110, 0.1);
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group-flex {
+            flex: 1;
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: #1a3c6e;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #152a4f;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* Table Styles */
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .attendance-table th,
+        .attendance-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .attendance-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .attendance-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        /* Status Badges */
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-in {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-out {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-clockin {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-clockout {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .card-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .tab {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <img src="public/logo.png" alt="JJ Food Express Logo">
+                <span>JJ Food Express</span>
+            </div>
+            <button class="language-toggle" @click="toggleLanguage">
+                {{ currentLang === 'zh' ? 'EN' : '中文' }}
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1>{{ t('attendanceManagement') }}</h1>
+                <p>{{ t('attendanceManagementSubtitle') }}</p>
+            </div>
+
+            <!-- Tab System -->
+            <div class="tab-container">
+                <button class="tab" :class="{ active: activeTab === 'outlet' }" @click="activeTab = 'outlet'">
+                    {{ t('viewByOutlet') }}
+                </button>
+                <button class="tab" :class="{ active: activeTab === 'employee' }" @click="activeTab = 'employee'">
+                    {{ t('searchByEmployee') }}
+                </button>
+            </div>
+
+            <!-- Outlet-based View -->
+            <div v-if="activeTab === 'outlet'">
+                <div class="form-row">
+                    <div class="form-group-flex">
+                        <label for="outletPrefix">{{ t('selectOutletPrefix') }}</label>
+                        <select 
+                            id="outletPrefix" 
+                            class="form-control" 
+                            v-model="selectedPrefix"
+                            @change="onPrefixChange"
+                        >
+                            <option value="">{{ t('selectOutletPrefixPlaceholder') }}</option>
+                            <option v-for="prefix in outletPrefixes" :key="prefix" :value="prefix">
+                                {{ prefix }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group-flex">
+                        <label for="outlet">{{ t('selectOutlet') }}</label>
+                        <select 
+                            id="outlet" 
+                            class="form-control" 
+                            v-model="selectedOutlet"
+                            @change="onOutletChange"
+                            :disabled="filteredOutlets.length === 0"
+                        >
+                            <option value="">{{ t('selectOutletPlaceholder') }}</option>
+                            <option v-for="outlet in filteredOutlets" :key="outlet.id" :value="outlet.id">
+                                {{ outlet.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group-flex">
+                        <label for="date">{{ t('selectDate') }}</label>
+                        <input 
+                            type="date" 
+                            id="date" 
+                            class="form-control" 
+                            v-model="selectedDate"
+                            @change="loadOutletAttendance"
+                        >
+                    </div>
+                </div>
+
+                <button 
+                    class="btn btn-primary" 
+                    @click="loadOutletAttendance"
+                    :disabled="!selectedOutlet || !selectedDate || isLoading"
+                >
+                    <span v-if="isLoading" class="loading"></span>
+                    {{ isLoading ? t('loading') : t('loadAttendance') }}
+                </button>
+
+                <!-- Outlet Attendance Results -->
+                <div v-if="outletAttendance.length > 0" class="attendance-results">
+                    <h3>{{ t('attendanceFor') }} {{ selectedOutletName }} - {{ formatDate(selectedDate) }}</h3>
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>{{ t('employeeName') }}</th>
+                                <th>{{ t('status') }}</th>
+                                <th>{{ t('clockInTime') }}</th>
+                                <th>{{ t('clockOutTime') }}</th>
+                                <th>{{ t('totalHours') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="record in outletAttendance" :key="record.employeeName">
+                                <td>{{ record.employeeName }}</td>
+                                <td>
+                                    <span :class="['status-badge', record.currentStatus === 'in' ? 'status-in' : 'status-out']">
+                                        {{ record.currentStatus === 'in' ? t('statusIn') : t('statusOut') }}
+                                    </span>
+                                </td>
+                                <td>{{ record.clockInTime || '-' }}</td>
+                                <td>{{ record.clockOutTime || '-' }}</td>
+                                <td>{{ record.totalHours || '-' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-else-if="selectedOutlet && selectedDate && !isLoading" class="empty-state">
+                    {{ t('noAttendanceFound') }}
+                </div>
+            </div>
+
+            <!-- Employee-based View -->
+            <div v-if="activeTab === 'employee'">
+                <div class="form-row">
+                    <div class="form-group-flex">
+                        <label for="employeePrefix">{{ t('selectOutletPrefix') }}</label>
+                        <select 
+                            id="employeePrefix" 
+                            class="form-control" 
+                            v-model="selectedEmployeePrefix"
+                            @change="onEmployeePrefixChange"
+                        >
+                            <option value="">{{ t('selectOutletPrefixPlaceholder') }}</option>
+                            <option v-for="prefix in outletPrefixes" :key="prefix" :value="prefix">
+                                {{ prefix }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group-flex">
+                        <label for="employeeOutlet">{{ t('selectOutlet') }}</label>
+                        <select 
+                            id="employeeOutlet" 
+                            class="form-control" 
+                            v-model="selectedEmployeeOutlet"
+                            @change="onEmployeeOutletChange"
+                            :disabled="filteredOutletsForEmployee.length === 0"
+                        >
+                            <option value="">{{ t('selectOutletPlaceholder') }}</option>
+                            <option v-for="outlet in filteredOutletsForEmployee" :key="outlet.id" :value="outlet.id">
+                                {{ outlet.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group-flex">
+                        <label for="employee">{{ t('selectEmployee') }}</label>
+                        <select 
+                            id="employee" 
+                            class="form-control" 
+                            v-model="selectedEmployee"
+                            @change="loadEmployeeAttendance"
+                            :disabled="employees.length === 0"
+                        >
+                            <option value="">{{ t('selectEmployeePlaceholder') }}</option>
+                            <option v-for="employee in employees" :key="employee.id" :value="employee.name">
+                                {{ employee.name }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group-flex">
+                        <label for="employeeDate">{{ t('selectDate') }}</label>
+                        <input 
+                            type="date" 
+                            id="employeeDate" 
+                            class="form-control" 
+                            v-model="selectedEmployeeDate"
+                            @change="loadEmployeeAttendance"
+                        >
+                    </div>
+
+                    <div class="form-group-flex">
+                        <button 
+                            class="btn btn-primary" 
+                            @click="loadEmployeeAttendance"
+                            :disabled="!selectedEmployee || isLoadingEmployee"
+                        >
+                            <span v-if="isLoadingEmployee" class="loading"></span>
+                            {{ isLoadingEmployee ? t('loading') : t('loadEmployeeLogs') }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Employee Attendance Results -->
+                <div v-if="employeeAttendance.length > 0" class="attendance-results">
+                    <h3>{{ t('attendanceLogsFor') }} {{ selectedEmployee }}</h3>
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>{{ t('date') }}</th>
+                                <th>{{ t('type') }}</th>
+                                <th>{{ t('time') }}</th>
+                                <th>{{ t('outlet') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="record in employeeAttendance" :key="record.id">
+                                <td>{{ formatDate(record.clockDate) }}</td>
+                                <td>
+                                    <span :class="['status-badge', record.type === 'clockIn' ? 'status-clockin' : 'status-clockout']">
+                                        {{ record.type === 'clockIn' ? t('clockIn') : t('clockOut') }}
+                                    </span>
+                                </td>
+                                <td>{{ record.clockTime }}</td>
+                                <td>{{ record.outletName }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-else-if="selectedEmployee && !isLoadingEmployee" class="empty-state">
+                    {{ t('noEmployeeLogsFound') }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, getDocs, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { firebaseConfig } from './secrets.js';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    currentLang: 'zh',
+                    activeTab: 'outlet',
+                    isLoading: false,
+                    isLoadingEmployee: false,
+                    
+                    // Outlet-based view
+                    selectedPrefix: '',
+                    selectedOutlet: '',
+                    selectedDate: '',
+                    outlets: [],
+                    outletAttendance: [],
+                    
+                    // Employee-based view
+                    selectedEmployeePrefix: '',
+                    selectedEmployeeOutlet: '',
+                    selectedEmployee: '',
+                    selectedEmployeeDate: '',
+                    employees: [],
+                    employeeAttendance: [],
+                    
+                    translations: {
+                        zh: {
+                            attendanceManagement: '员工考勤管理',
+                            attendanceManagementSubtitle: '查看和管理员工考勤记录',
+                            viewByOutlet: '按门店查看',
+                            searchByEmployee: '按员工搜索',
+                            selectOutletPrefix: '选择门店前缀',
+                            selectOutletPrefixPlaceholder: '请选择门店前缀',
+                            selectOutlet: '选择门店',
+                            selectOutletPlaceholder: '请选择门店',
+                            selectDate: '选择日期',
+                            selectEmployee: '选择员工',
+                            selectEmployeePlaceholder: '请选择员工',
+                            loadAttendance: '加载考勤记录',
+                            loadEmployeeLogs: '加载员工记录',
+                            loading: '加载中...',
+                            employeeName: '员工姓名',
+                            status: '状态',
+                            clockInTime: '上班时间',
+                            clockOutTime: '下班时间',
+                            totalHours: '工作时长',
+                            statusIn: '在岗',
+                            statusOut: '离岗',
+                            clockIn: '上班',
+                            clockOut: '下班',
+                            date: '日期',
+                            type: '类型',
+                            time: '时间',
+                            outlet: '门店',
+                            attendanceFor: '考勤记录 -',
+                            attendanceLogsFor: '考勤记录 -',
+                            noAttendanceFound: '未找到考勤记录',
+                            noEmployeeLogsFound: '未找到员工记录'
+                        },
+                        en: {
+                            attendanceManagement: 'Employee Attendance Management',
+                            attendanceManagementSubtitle: 'View and manage employee attendance records',
+                            viewByOutlet: 'View by Outlet',
+                            searchByEmployee: 'Search by Employee',
+                            selectOutletPrefix: 'Select Outlet Prefix',
+                            selectOutletPrefixPlaceholder: 'Please select outlet prefix',
+                            selectOutlet: 'Select Outlet',
+                            selectOutletPlaceholder: 'Please select an outlet',
+                            selectDate: 'Select Date',
+                            selectEmployee: 'Select Employee',
+                            selectEmployeePlaceholder: 'Please select an employee',
+                            loadAttendance: 'Load Attendance',
+                            loadEmployeeLogs: 'Load Employee Logs',
+                            loading: 'Loading...',
+                            employeeName: 'Employee Name',
+                            status: 'Status',
+                            clockInTime: 'Clock In Time',
+                            clockOutTime: 'Clock Out Time',
+                            totalHours: 'Total Hours',
+                            statusIn: 'In',
+                            statusOut: 'Out',
+                            clockIn: 'Clock In',
+                            clockOut: 'Clock Out',
+                            date: 'Date',
+                            type: 'Type',
+                            time: 'Time',
+                            outlet: 'Outlet',
+                            attendanceFor: 'Attendance for',
+                            attendanceLogsFor: 'Attendance logs for',
+                            noAttendanceFound: 'No attendance records found',
+                            noEmployeeLogsFound: 'No employee logs found'
+                        }
+                    }
+                };
+            },
+            computed: {
+                outletPrefixes() {
+                    const prefixes = [...new Set(this.outlets.map(outlet => outlet.id.split('-')[0]))];
+                    return prefixes.sort();
+                },
+                filteredOutlets() {
+                    if (!this.selectedPrefix) return [];
+                    return this.outlets.filter(outlet => outlet.id.startsWith(this.selectedPrefix + '-'));
+                },
+                filteredOutletsForEmployee() {
+                    if (!this.selectedEmployeePrefix) return [];
+                    return this.outlets.filter(outlet => outlet.id.startsWith(this.selectedEmployeePrefix + '-'));
+                },
+                selectedOutletName() {
+                    const outlet = this.outlets.find(o => o.id === this.selectedOutlet);
+                    return outlet ? outlet.name : '';
+                }
+            },
+            methods: {
+                toggleLanguage() {
+                    this.currentLang = this.currentLang === 'zh' ? 'en' : 'zh';
+                },
+                t(key) {
+                    return this.translations[this.currentLang][key] || key;
+                },
+                formatDate(dateString) {
+                    if (!dateString) return '';
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                },
+                async fetchOutlets() {
+                    try {
+                        const outletsRef = collection(db, 'outlets');
+                        const querySnapshot = await getDocs(outletsRef);
+                        this.outlets = querySnapshot.docs.map(doc => ({
+                            id: doc.id,
+                            name: doc.data().name || '',
+                            address: doc.data().address || ''
+                        }));
+                    } catch (error) {
+                        console.error('Error fetching outlets:', error);
+                    }
+                },
+                onPrefixChange() {
+                    this.selectedOutlet = '';
+                    this.outletAttendance = [];
+                },
+                onOutletChange() {
+                    this.outletAttendance = [];
+                },
+                onEmployeePrefixChange() {
+                    this.selectedEmployeeOutlet = '';
+                    this.selectedEmployee = '';
+                    this.employees = [];
+                    this.employeeAttendance = [];
+                },
+                onEmployeeOutletChange() {
+                    this.selectedEmployee = '';
+                    this.employees = [];
+                    this.employeeAttendance = [];
+                    if (this.selectedEmployeeOutlet) {
+                        this.fetchEmployees();
+                    }
+                },
+                async fetchEmployees() {
+                    try {
+                        const employeesRef = collection(db, `outlets/${this.selectedEmployeeOutlet}/employees`);
+                        const querySnapshot = await getDocs(employeesRef);
+                        this.employees = querySnapshot.docs.map(doc => ({
+                            id: doc.id,
+                            name: doc.data().name || '',
+                            status: doc.data().status || 'out'
+                        }));
+                    } catch (error) {
+                        console.error('Error fetching employees:', error);
+                        this.employees = [];
+                    }
+                },
+                async loadOutletAttendance() {
+                    if (!this.selectedOutlet || !this.selectedDate) return;
+                    
+                    this.isLoading = true;
+                    this.outletAttendance = [];
+                    
+                    try {
+                        const attendanceRef = collection(db, `attendance/${this.selectedOutlet}/${this.selectedDate}`);
+                        const querySnapshot = await getDocs(attendanceRef);
+                        
+                        // Group by employee
+                        const employeeRecords = {};
+                        querySnapshot.docs.forEach(doc => {
+                            const data = doc.data();
+                            const employeeName = data.employeeName;
+                            
+                            if (!employeeRecords[employeeName]) {
+                                employeeRecords[employeeName] = {
+                                    employeeName,
+                                    clockInTime: null,
+                                    clockOutTime: null,
+                                    currentStatus: 'out'
+                                };
+                            }
+                            
+                            if (data.type === 'clockIn') {
+                                employeeRecords[employeeName].clockInTime = data.clockTime;
+                                employeeRecords[employeeName].currentStatus = 'in';
+                            } else if (data.type === 'clockOut') {
+                                employeeRecords[employeeName].clockOutTime = data.clockTime;
+                                employeeRecords[employeeName].currentStatus = 'out';
+                            }
+                        });
+                        
+                        this.outletAttendance = Object.values(employeeRecords);
+                        
+                    } catch (error) {
+                        console.error('Error loading outlet attendance:', error);
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                async loadEmployeeAttendance() {
+                    if (!this.selectedEmployee) return;
+                    
+                    this.isLoadingEmployee = true;
+                    this.employeeAttendance = [];
+                    
+                    try {
+                        // Get all attendance records for this employee across all outlets
+                        const attendanceRecords = [];
+                        
+                        // Search through all outlets
+                        for (const outlet of this.outlets) {
+                            try {
+                                const attendanceRef = collection(db, `attendance/${outlet.id}`);
+                                const querySnapshot = await getDocs(attendanceRef);
+                                
+                                querySnapshot.docs.forEach(doc => {
+                                    const data = doc.data();
+                                    if (data.employeeName === this.selectedEmployee) {
+                                        attendanceRecords.push({
+                                            id: doc.id,
+                                            ...data,
+                                            outletName: outlet.name
+                                        });
+                                    }
+                                });
+                            } catch (error) {
+                                console.error(`Error loading attendance for outlet ${outlet.id}:`, error);
+                            }
+                        }
+                        
+                        // Filter by date if selected
+                        let filteredRecords = attendanceRecords;
+                        if (this.selectedEmployeeDate) {
+                            filteredRecords = attendanceRecords.filter(record => 
+                                record.clockDate === this.selectedEmployeeDate
+                            );
+                        }
+                        
+                        // Sort by date and time
+                        this.employeeAttendance = filteredRecords.sort((a, b) => {
+                            const dateA = new Date(a.clockDate + ' ' + a.clockTime);
+                            const dateB = new Date(b.clockDate + ' ' + b.clockTime);
+                            return dateB - dateA;
+                        });
+                        
+                    } catch (error) {
+                        console.error('Error loading employee attendance:', error);
+                    } finally {
+                        this.isLoadingEmployee = false;
+                    }
+                }
+            },
+            mounted() {
+                this.fetchOutlets();
+                // Set default date to today
+                const today = new Date().toISOString().split('T')[0];
+                this.selectedDate = today;
+                this.selectedEmployeeDate = today;
+            }
+        }).mount('body');
+    </script>
+</body>
+</html> 

@@ -28,7 +28,8 @@ export default defineConfig({
         product:'product.html',
         delivery:'delivery.html',
         migrate_images:'migrate_images.html',
-        attendance:'attendance.html'
+        attendance:'attendance.html',
+        employee:'employee.html'
       }
     }
   }
