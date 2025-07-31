@@ -521,8 +521,8 @@
                         // Get Singapore time
                         const now = new Date();
                         const singaporeTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}));
-                        const dateString = singaporeTime.toISOString().split('T')[0]; // YYYY-MM-DD format
-                        const timeString = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                        const dateString = singaporeTime.toLocaleDateString('en-CA', {timeZone: "Asia/Singapore"}); // YYYY-MM-DD format
+                        const timeString = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US', {timeZone: "Asia/Singapore"});
                         
                         // Get outlet details
                         const selectedOutletData = this.outlets.find(o => o.id === this.selectedOutlet);
