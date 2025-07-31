@@ -753,17 +753,34 @@
                         // Get all attendance records for this employee from the selected outlet
                         const attendanceRecords = [];
                         
-                        // Get all dates for the selected outlet
-                        const outletAttendanceRef = collection(db, `attendance/${this.selectedEmployeeOutlet}`);
-                        const outletQuerySnapshot = await getDocs(outletAttendanceRef);
+                        // Since we can't directly list subcollections, we'll need to query known dates
+                        // For now, let's try the last 30 days or use the selected date
+                        const datesToCheck = [];
                         
-                        // For each date collection, search for the employee
-                        for (const dateDoc of outletQuerySnapshot.docs) {
-                            const dateCollectionRef = collection(db, `attendance/${this.selectedEmployeeOutlet}/${dateDoc.id}`);
-                            const dateQuerySnapshot = await getDocs(dateCollectionRef);
+                        if (this.selectedEmployeeDate) {
+                            datesToCheck.push(this.selectedEmployeeDate);
+                        } else {
+                            // Generate last 30 days if no specific date selected
+                            for (let i = 0; i < 30; i++) {
+                                const date = new Date();
+                                date.setDate(date.getDate() - i);
+                                datesToCheck.push(date.toISOString().split('T')[0]);
+                            }
+                        }
+                        
+                        // Check each date for the employee
+                        for (const date of datesToCheck) {
+                            try {
+                                const dateCollectionRef = collection(db, `attendance/${this.selectedEmployeeOutlet}/${date}`);
+                                const dateQuerySnapshot = await getDocs(dateCollectionRef);
                             
                             dateQuerySnapshot.docs.forEach(doc => {
                                 const data = doc.data();
+                                console.log('Checking record:', data);
+                                console.log('Looking for employee:', this.selectedEmployee);
+                                console.log('Record employee name:', data.employeeName);
+                                console.log('Match?', data.employeeName === this.selectedEmployee);
+                                
                                 if (data.employeeName === this.selectedEmployee) {
                                     // Use the correct field names based on the type
                                     const timeField = data.type === 'clockIn' ? 'clockInTime' : 'clockOutTime';
@@ -775,6 +792,9 @@
                                     });
                                 }
                             });
+                            } catch (error) {
+                                console.error(`Error loading attendance for outlet ${this.selectedEmployeeOutlet} on date ${date}:`, error);
+                            }
                         }
                         
                         // Filter by date if selected
