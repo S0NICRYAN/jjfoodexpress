@@ -780,9 +780,13 @@
                         // Filter by date if selected
                         let filteredRecords = attendanceRecords;
                         if (this.selectedEmployeeDate) {
-                            filteredRecords = attendanceRecords.filter(record => 
-                                record.clockDate === this.selectedEmployeeDate
-                            );
+                            console.log('Filtering by date:', this.selectedEmployeeDate);
+                            console.log('Available records:', attendanceRecords.map(r => ({ date: r.clockDate, employee: r.employeeName })));
+                            filteredRecords = attendanceRecords.filter(record => {
+                                const matches = record.clockDate === this.selectedEmployeeDate;
+                                console.log(`Record date: ${record.clockDate}, Selected date: ${this.selectedEmployeeDate}, Matches: ${matches}`);
+                                return matches;
+                            });
                         }
                         
                         // Sort by date and time
