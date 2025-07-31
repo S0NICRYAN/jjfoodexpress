@@ -7,6 +7,104 @@
     <link rel="stylesheet" href="product.css">
     <!-- Vue 3 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <style>
+        /* Employee Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 0;
+            border-radius: 8px;
+            min-width: 600px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .add-employee-form {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .employee-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .employee-table th,
+        .employee-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-in {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-out {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background-color: #138496;
+        }
+    </style>
 </head>
 <body>
     <!-- Initial loading screen (outside of Vue app) -->
@@ -138,6 +236,7 @@
                                     <td>
                                         <div class="table-actions">
                                             <button class="btn btn-secondary" @click="editOutlet(outlet)">{{ t('edit') }}</button>
+                                            <button class="btn btn-info" @click="manageEmployees(outlet)">{{ t('employees') }}</button>
                                             <button class="btn btn-danger" @click="deleteOutlet(outlet)">{{ t('delete') }}</button>
                                         </div>
                                     </td>
@@ -145,6 +244,67 @@
                             </template>
                         </tbody>
                     </table>
+                </div>
+                
+                <!-- Employee Management Modal -->
+                <div v-if="showEmployeeModal" class="modal-overlay" @click="closeEmployeeModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>{{ t('manageEmployees') }} - {{ selectedOutletForEmployees?.name }}</h3>
+                            <button class="close-btn" @click="closeEmployeeModal">&times;</button>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <!-- Add Employee Form -->
+                            <div class="add-employee-form">
+                                <h4>{{ t('addNewEmployee') }}</h4>
+                                <div class="form-row">
+                                    <div class="form-group-flex">
+                                        <label for="newEmployeeName">{{ t('employeeName') }}</label>
+                                        <input type="text" id="newEmployeeName" v-model="newEmployee.name" :placeholder="t('enterEmployeeName')">
+                                    </div>
+                                    <div class="form-group-flex">
+                                        <button class="btn btn-primary" @click="addEmployee" :disabled="!newEmployee.name.trim() || isSubmittingEmployee">
+                                            {{ isSubmittingEmployee ? t('adding') : t('addEmployee') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Employee List -->
+                            <div class="employee-list">
+                                <h4>{{ t('currentEmployees') }}</h4>
+                                <div v-if="employees.length === 0" class="empty-state">
+                                    {{ t('noEmployeesFound') }}
+                                </div>
+                                <table v-else class="employee-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{{ t('employeeName') }}</th>
+                                            <th>{{ t('status') }}</th>
+                                            <th>{{ t('actions') }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="employee in employees" :key="employee.id">
+                                            <td>{{ employee.name }}</td>
+                                            <td>
+                                                <span :class="['status-badge', employee.status === 'in' ? 'status-in' : 'status-out']">
+                                                    {{ employee.status === 'in' ? t('statusIn') : t('statusOut') }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="table-actions">
+                                                    <button class="btn btn-sm btn-secondary" @click="editEmployee(employee)">{{ t('edit') }}</button>
+                                                    <button class="btn btn-sm btn-danger" @click="deleteEmployee(employee)">{{ t('delete') }}</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -371,6 +531,91 @@
                     back: {
                         zh: '返回',
                         en: 'Back'
+                    },
+                    // Employee management translations
+                    employees: {
+                        zh: '员工',
+                        en: 'Employees'
+                    },
+                    manageEmployees: {
+                        zh: '管理员工',
+                        en: 'Manage Employees'
+                    },
+                    addNewEmployee: {
+                        zh: '添加新员工',
+                        en: 'Add New Employee'
+                    },
+                    currentEmployees: {
+                        zh: '现有员工',
+                        en: 'Current Employees'
+                    },
+                    employeeName: {
+                        zh: '员工姓名',
+                        en: 'Employee Name'
+                    },
+                    status: {
+                        zh: '状态',
+                        en: 'Status'
+                    },
+                    statusIn: {
+                        zh: '在岗',
+                        en: 'In'
+                    },
+                    statusOut: {
+                        zh: '离岗',
+                        en: 'Out'
+                    },
+                    enterEmployeeName: {
+                        zh: '输入员工姓名',
+                        en: 'Enter employee name'
+                    },
+                    addEmployee: {
+                        zh: '添加员工',
+                        en: 'Add Employee'
+                    },
+                    adding: {
+                        zh: '添加中...',
+                        en: 'Adding...'
+                    },
+                    noEmployeesFound: {
+                        zh: '未找到员工',
+                        en: 'No employees found'
+                    },
+                    deleteEmployeeConfirm: {
+                        zh: '确定要删除员工 "{0}" 吗？',
+                        en: 'Are you sure you want to delete employee "{0}"?'
+                    },
+                    successAddEmployee: {
+                        zh: '员工已添加',
+                        en: 'Employee added successfully'
+                    },
+                    successUpdateEmployee: {
+                        zh: '员工信息已更新',
+                        en: 'Employee updated successfully'
+                    },
+                    successDeleteEmployee: {
+                        zh: '员工已删除',
+                        en: 'Employee deleted successfully'
+                    },
+                    failedAddEmployee: {
+                        zh: '添加员工失败',
+                        en: 'Failed to add employee'
+                    },
+                    failedUpdateEmployee: {
+                        zh: '更新员工失败',
+                        en: 'Failed to update employee'
+                    },
+                    failedDeleteEmployee: {
+                        zh: '删除员工失败',
+                        en: 'Failed to delete employee'
+                    },
+                    failedLoadEmployees: {
+                        zh: '加载员工失败',
+                        en: 'Failed to load employees'
+                    },
+                    enterNewName: {
+                        zh: '输入新姓名',
+                        en: 'Enter new name'
                     }
                 };
                 
@@ -398,6 +643,13 @@
                 const outlets = ref([]);
                 const searchQuery = ref('');
                 const prefixFilter = ref('all'); // Default to show all prefixes
+                
+                // Employee management
+                const showEmployeeModal = ref(false);
+                const selectedOutletForEmployees = ref(null);
+                const employees = ref([]);
+                const newEmployee = ref({ name: '' });
+                const isSubmittingEmployee = ref(false);
                 
                 // Get prefix from outlet code (everything before the dash)
                 const getPrefix = (code) => {
@@ -640,6 +892,95 @@
                     localStorage.setItem('preferred_language', currentLang.value);
                 };
                 
+                // Employee management methods
+                const manageEmployees = async (outlet) => {
+                    selectedOutletForEmployees.value = outlet;
+                    showEmployeeModal.value = true;
+                    await loadEmployeesForOutlet();
+                };
+                
+                const loadEmployeesForOutlet = async () => {
+                    if (!selectedOutletForEmployees.value) return;
+                    
+                    try {
+                        const employeesRef = collection(db, `outlets/${selectedOutletForEmployees.value.id}/employees`);
+                        const snapshot = await getDocs(employeesRef);
+                        
+                        employees.value = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            name: doc.data().name || '',
+                            status: doc.data().status || 'out'
+                        }));
+                    } catch (error) {
+                        console.error('Error loading employees:', error);
+                        message.value = { type: 'error', text: t('failedLoadEmployees') };
+                    }
+                };
+                
+                const addEmployee = async () => {
+                    if (!newEmployee.value.name.trim()) return;
+                    
+                    isSubmittingEmployee.value = true;
+                    
+                    try {
+                        const employeeData = {
+                            name: newEmployee.value.name.trim(),
+                            status: 'out' // Always start as 'out'
+                        };
+                        
+                        const employeesRef = collection(db, `outlets/${selectedOutletForEmployees.value.id}/employees`);
+                        await addDoc(employeesRef, employeeData);
+                        
+                        // Reset form and reload employees
+                        newEmployee.value = { name: '' };
+                        await loadEmployeesForOutlet();
+                        
+                        message.value = { type: 'success', text: t('successAddEmployee') };
+                    } catch (error) {
+                        message.value = { type: 'error', text: t('failedAddEmployee') };
+                    } finally {
+                        isSubmittingEmployee.value = false;
+                    }
+                };
+                
+                const editEmployee = (employee) => {
+                    const newName = prompt(t('enterNewName'), employee.name);
+                    if (newName && newName.trim() !== employee.name) {
+                        updateEmployeeName(employee.id, newName.trim());
+                    }
+                };
+                
+                const updateEmployeeName = async (employeeId, newName) => {
+                    try {
+                        const employeeRef = doc(db, `outlets/${selectedOutletForEmployees.value.id}/employees`, employeeId);
+                        await updateDoc(employeeRef, { name: newName });
+                        await loadEmployeesForOutlet();
+                        message.value = { type: 'success', text: t('successUpdateEmployee') };
+                    } catch (error) {
+                        message.value = { type: 'error', text: t('failedUpdateEmployee') };
+                    }
+                };
+                
+                const deleteEmployee = async (employee) => {
+                    if (!confirm(t('deleteEmployeeConfirm', employee.name))) return;
+                    
+                    try {
+                        const employeeRef = doc(db, `outlets/${selectedOutletForEmployees.value.id}/employees`, employee.id);
+                        await deleteDoc(employeeRef);
+                        await loadEmployeesForOutlet();
+                        message.value = { type: 'success', text: t('successDeleteEmployee') };
+                    } catch (error) {
+                        message.value = { type: 'error', text: t('failedDeleteEmployee') };
+                    }
+                };
+                
+                const closeEmployeeModal = () => {
+                    showEmployeeModal.value = false;
+                    selectedOutletForEmployees.value = null;
+                    employees.value = [];
+                    newEmployee.value = { name: '' };
+                };
+                
                 return {
                     currentLang,
                     t,
@@ -664,7 +1005,20 @@
                     isAuthenticated,
                     isCheckingAuth,
                     userEmail,
-                    goBack
+                    goBack,
+                    // Employee management
+                    showEmployeeModal,
+                    selectedOutletForEmployees,
+                    employees,
+                    newEmployee,
+                    isSubmittingEmployee,
+                    manageEmployees,
+                    loadEmployeesForOutlet,
+                    addEmployee,
+                    editEmployee,
+                    updateEmployeeName,
+                    deleteEmployee,
+                    closeEmployeeModal
                 };
             }
         }).mount('#app');
