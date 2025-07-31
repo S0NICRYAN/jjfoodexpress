@@ -514,9 +514,11 @@
                     this.message = null;
                     
                     try {
+                        // Get Singapore time
                         const now = new Date();
-                        const dateString = now.toISOString().split('T')[0]; // YYYY-MM-DD format
-                        const timeString = now.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                        const singaporeTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}));
+                        const dateString = singaporeTime.toISOString().split('T')[0]; // YYYY-MM-DD format
+                        const timeString = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
                         
                         // Get outlet details
                         const selectedOutletData = this.outlets.find(o => o.id === this.selectedOutlet);
@@ -526,8 +528,8 @@
                         // Create attendance record
                         const attendanceData = {
                             employeeName: this.employeeName.trim(),
-                            clockTime: timeString,
-                            clockDate: dateString,
+                            clockInTime: timeString,
+                            clockInDate: dateString,
                             type: actionType,
                             timestamp: serverTimestamp()
                         };
@@ -546,7 +548,7 @@
                         }
                         
                         // Format time for display
-                        const displayTime = now.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                        const displayTime = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
                         const successMessage = this.t('successMessageWithTime').replace('{time}', displayTime).replace('clock in', actionType === 'clockIn' ? 'clock in' : 'clock out');
                         this.showMessage(successMessage, 'success');
                         this.resetForm();

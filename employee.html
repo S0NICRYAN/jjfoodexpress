@@ -784,12 +784,13 @@
                                 if (data.employeeName === this.selectedEmployee) {
                                     // Use the correct field names based on the type
                                     const timeField = data.type === 'clockIn' ? 'clockInTime' : 'clockOutTime';
-                                    attendanceRecords.push({
-                                        id: doc.id,
-                                        ...data,
-                                        clockTime: data[timeField], // Map to clockTime for display
-                                        outletName: this.outlets.find(o => o.id === this.selectedEmployeeOutlet)?.name || this.selectedEmployeeOutlet
-                                    });
+                                                                            attendanceRecords.push({
+                                            id: doc.id,
+                                            ...data,
+                                            clockTime: data[timeField], // Map to clockTime for display
+                                            clockDate: data.clockInDate, // Use the correct date field
+                                            outletName: this.outlets.find(o => o.id === this.selectedEmployeeOutlet)?.name || this.selectedEmployeeOutlet
+                                        });
                                 }
                             });
                             } catch (error) {
