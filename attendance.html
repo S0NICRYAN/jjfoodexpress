@@ -608,7 +608,8 @@
                         this.employees = querySnapshot.docs.map(doc => {
                             const employeeData = {
                                 id: doc.id,
-                                name: doc.data().name || doc.id
+                                name: doc.data().name || doc.id,
+                                status: doc.data().status || 'out'
                             };
                             console.log('Employee data:', employeeData);
                             return employeeData;
