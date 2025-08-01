@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SHIAWASE (S) PTE LTD - Employee Attendance Management</title>
+    <title>JJ Food Express - Employee Attendance Management</title>
     <style>
         /* Base Styles */
         * {
@@ -295,7 +295,7 @@
         <div class="header-content">
             <div class="logo">
                 <img src="public/logo.png" alt="JJ Food Express Logo">
-                <span>SHIAWASE (S) PTE LTD</span>
+                <span>JJ Food Express</span>
             </div>
             <button class="language-toggle" @click="toggleLanguage">
                 {{ currentLang === 'zh' ? 'EN' : '中文' }}
@@ -758,6 +758,42 @@
                                     clockOutTime: null,
                                     currentStatus: employees[employeeName].currentStatus
                                 };
+                            }
+                        });
+                        
+                        // Calculate total hours for each employee
+                        Object.values(employeeRecords).forEach(record => {
+                            if (record.clockInTime) {
+                                let endTime = record.clockOutTime;
+                                
+                                // If no clock out time, use current time
+                                if (!endTime) {
+                                    const now = new Date();
+                                    const singaporeTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}));
+                                    const hours = String(singaporeTime.getHours()).padStart(2, '0');
+                                    const minutes = String(singaporeTime.getMinutes()).padStart(2, '0');
+                                    const seconds = String(singaporeTime.getSeconds()).padStart(2, '0');
+                                    endTime = `${hours}:${minutes}:${seconds}`;
+                                }
+                                
+                                // Calculate hours worked
+                                const startTime = record.clockInTime;
+                                const startParts = startTime.split(':').map(Number);
+                                const endParts = endTime.split(':').map(Number);
+                                
+                                let startSeconds = startParts[0] * 3600 + startParts[1] * 60 + startParts[2];
+                                let endSeconds = endParts[0] * 3600 + endParts[1] * 60 + endParts[2];
+                                
+                                // If end time is before start time, it means it's the next day
+                                if (endSeconds < startSeconds) {
+                                    endSeconds += 24 * 3600; // Add 24 hours
+                                }
+                                
+                                const totalSeconds = endSeconds - startSeconds;
+                                const totalHours = (totalSeconds / 3600).toFixed(2);
+                                record.totalHours = totalHours;
+                            } else {
+                                record.totalHours = '0.00';
                             }
                         });
                         
