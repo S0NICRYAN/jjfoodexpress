@@ -472,7 +472,11 @@
                     const now = new Date();
                     const singaporeTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}));
                     
-                    this.currentTime = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                    // Format time in 24-hour format
+                    const hours = String(singaporeTime.getHours()).padStart(2, '0');
+                    const minutes = String(singaporeTime.getMinutes()).padStart(2, '0');
+                    const seconds = String(singaporeTime.getSeconds()).padStart(2, '0');
+                    this.currentTime = `${hours}:${minutes}:${seconds}`;
                     
                     // Format date as dd/mm/yyyy using Singapore time
                     const day = String(singaporeTime.getDate()).padStart(2, '0');
@@ -571,8 +575,11 @@
                             employee.status = this.currentEmployeeStatus === 'in' ? 'out' : 'in';
                         }
                         
-                        // Format time for display using Singapore time
-                        const displayTime = singaporeTime.toLocaleTimeString(this.currentLang === 'zh' ? 'zh-CN' : 'en-US');
+                        // Format time for display in 24-hour format
+                        const displayHours = String(singaporeTime.getHours()).padStart(2, '0');
+                        const displayMinutes = String(singaporeTime.getMinutes()).padStart(2, '0');
+                        const displaySeconds = String(singaporeTime.getSeconds()).padStart(2, '0');
+                        const displayTime = `${displayHours}:${displayMinutes}:${displaySeconds}`;
                         console.log('Message key:', actionType === 'clockIn' ? 'successMessageClockIn' : 'successMessageClockOut');
                         const messageKey = actionType === 'clockIn' ? 'successMessageClockIn' : 'successMessageClockOut';
                         const successMessage = this.t(messageKey).replace('{time}', displayTime);
