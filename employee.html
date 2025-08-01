@@ -516,7 +516,7 @@
                             id="date" 
                             class="form-control" 
                             v-model="selectedDate"
-                            @change="loadOutletAttendance"
+                            @change="onDateChange"
                         >
                     </div>
                 </div>
@@ -857,6 +857,16 @@
                 },
                 onOutletChange() {
                     this.outletAttendance = [];
+                    // Auto-load attendance when outlet is selected and date is already set
+                    if (this.selectedOutlet && this.selectedDate) {
+                        this.loadOutletAttendance();
+                    }
+                },
+                onDateChange() {
+                    // Auto-load attendance when date is changed and outlet is already selected
+                    if (this.selectedOutlet && this.selectedDate) {
+                        this.loadOutletAttendance();
+                    }
                 },
                 onEmployeePrefixChange() {
                     this.selectedEmployeeOutlet = '';
