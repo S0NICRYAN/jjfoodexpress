@@ -975,10 +975,11 @@
                                 }
                                 
                                 const totalSeconds = endSeconds - startSeconds;
-                                const totalHours = (totalSeconds / 3600).toFixed(2);
-                                record.totalHours = totalHours;
+                                const hours = Math.floor(totalSeconds / 3600);
+                                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                                record.totalHours = `${hours}h ${minutes}m`;
                             } else {
-                                record.totalHours = '0.00';
+                                record.totalHours = '0h 0m';
                             }
                         });
                         
@@ -1089,10 +1090,11 @@
                 });
                 
                 this.fetchOutlets();
-                // Set default date to today
+                // Set default date to today only for outlet view
                 const today = new Date().toISOString().split('T')[0];
                 this.selectedDate = today;
-                this.selectedEmployeeDate = today;
+                // Don't auto-fill employee date - let user choose
+                this.selectedEmployeeDate = '';
             }
         }).mount('body');
     </script>
