@@ -708,7 +708,10 @@
                     this.outletAttendance = [];
                     
                     try {
-                        const attendanceRef = collection(db, `attendance/${this.selectedOutlet}/${this.selectedDate}`);
+                        // Convert YYYY-MM-DD to dd-mm-yyyy format for Firebase
+                        const [year, month, day] = this.selectedDate.split('-');
+                        const formattedDate = `${day}-${month}-${year}`;
+                        const attendanceRef = collection(db, `attendance/${this.selectedOutlet}/${formattedDate}`);
                         const querySnapshot = await getDocs(attendanceRef);
                         
                         // Group by employee
@@ -758,9 +761,9 @@
                         const datesToCheck = [];
                         
                         if (this.selectedEmployeeDate) {
-                            // Convert YYYY-MM-DD to DD/MM/YYYY format for Firebase query
+                            // Convert YYYY-MM-DD to dd-mm-yyyy format for Firebase query
                             const [year, month, day] = this.selectedEmployeeDate.split('-');
-                            const formattedDate = `${day}/${month}/${year}`;
+                            const formattedDate = `${day}-${month}-${year}`;
                             datesToCheck.push(formattedDate);
                         } else {
                             // Generate last 30 days if no specific date selected
@@ -770,7 +773,7 @@
                                 const day = String(date.getDate()).padStart(2, '0');
                                 const month = String(date.getMonth() + 1).padStart(2, '0');
                                 const year = date.getFullYear();
-                                datesToCheck.push(`${day}/${month}/${year}`);
+                                datesToCheck.push(`${day}-${month}-${year}`);
                             }
                         }
                         
@@ -808,9 +811,9 @@
                         // Filter by date if selected
                         let filteredRecords = attendanceRecords;
                         if (this.selectedEmployeeDate) {
-                            // Convert selected date to DD/MM/YYYY format for comparison
+                            // Convert selected date to dd-mm-yyyy format for comparison
                             const [year, month, day] = this.selectedEmployeeDate.split('-');
-                            const formattedSelectedDate = `${day}/${month}/${year}`;
+                            const formattedSelectedDate = `${day}-${month}-${year}`;
                             
                             console.log('Filtering by date:', formattedSelectedDate);
                             console.log('Available records:', attendanceRecords.map(r => ({ date: r.clockDate, employee: r.employeeName })));
