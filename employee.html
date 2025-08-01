@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JJ Food Express - Employee Attendance Management</title>
+    <title>员工考勤管理 - SHIAWASE (S) PTE LTD</title>
     <style>
         /* Base Styles */
         * {
@@ -17,14 +17,53 @@
             background-color: #f5f5f5;
             color: #333;
             line-height: 1.5;
-            height: 100vh;
+        }
+        
+        /* Authentication check loading - prevent flashing */
+        .app-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #f5f5f5;
+            z-index: 1000;
+        }
+        
+        .app-loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(26, 60, 110, 0.2);
+            border-radius: 50%;
+            border-top-color: #1a3c6e;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        
+        .app-loading-text {
+            color: #1a3c6e;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+        
+        /* Hide all content until authentication is checked */
+        #app {
+            visibility: hidden;
+        }
+        
+        #app.loaded {
+            visibility: visible;
         }
         
         /* Header */
         header {
-            background-color: #1a3c6e;
+            background-color: #1e3a75;
             color: white;
-            padding: 10px 20px;
+            padding: 15px 20px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
@@ -48,11 +87,46 @@
             height: 50px;
         }
         
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        .user-info svg {
+            margin-right: 5px;
+        }
+        
+        .back-btn {
+            background-color: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .back-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
         .language-toggle {
             background-color: transparent;
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
-            padding: 5px 10px;
+            padding: 8px 12px;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
@@ -67,6 +141,31 @@
             max-width: 1200px;
             margin: 20px auto;
             padding: 20px;
+        }
+        
+        /* Authentication loading */
+        .auth-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            text-align: center;
+        }
+        
+        .auth-loading .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1a3c6e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        .auth-loading p {
+            color: #666;
+            font-size: 1.1rem;
         }
         
         .card {
@@ -85,6 +184,12 @@
         .card-header h1 {
             color: #1a3c6e;
             font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .card-header h2 {
+            color: #1a3c6e;
+            font-size: 1.5rem;
             margin-bottom: 10px;
         }
         
@@ -168,6 +273,26 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        /* Attendance Results */
+        .attendance-results {
+            margin-top: 30px;
+        }
+        
+        .attendance-header {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .attendance-header h3 {
+            color: #1a3c6e;
+            font-size: 1.3rem;
+            margin: 0;
         }
         
         .btn-primary {
@@ -256,6 +381,11 @@
             to { transform: rotate(360deg); }
         }
         
+        /* Show app when loaded */
+        #app.loaded {
+            visibility: visible;
+        }
+        
         /* Empty State */
         .empty-state {
             text-align: center;
@@ -291,24 +421,49 @@
     </style>
 </head>
 <body>
-    <header>
-        <div class="header-content">
-            <div class="logo">
-                <img src="public/logo.png" alt="JJ Food Express Logo">
-                <span>JJ Food Express</span>
-            </div>
-            <button class="language-toggle" @click="toggleLanguage">
-                {{ currentLang === 'zh' ? 'EN' : '中文' }}
-            </button>
-        </div>
-    </header>
+    <!-- Initial loading screen -->
+    <div id="initial-loading" class="app-loading">
+        <div class="app-loading-spinner"></div>
+        <div class="app-loading-text">Loading...</div>
+    </div>
 
-    <div class="container">
-        <div class="card">
-            <div class="card-header">
-                <h1>{{ t('attendanceManagement') }}</h1>
-                <p>{{ t('attendanceManagementSubtitle') }}</p>
+    <div id="app">
+        <header>
+            <div class="header-content">
+                <div class="logo" @click="goBack" style="cursor: pointer;">
+                    <img src="logo.png" alt="Logo"> SHIAWASE (S) PTE LTD
+                </div>
+                <div class="header-actions">
+                    <div v-if="isAuthenticated" class="user-info">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z"/>
+                        </svg>
+                        {{ userEmail }}
+                    </div>
+                    <button class="back-btn" @click="goBack">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                        </svg>
+                        Back
+                    </button>
+                    <button class="language-toggle" @click="toggleLanguage">
+                        {{ currentLang === 'zh' ? 'English' : '中文' }}
+                    </button>
+                </div>
             </div>
+        </header>
+
+        <div class="container">
+            <div v-if="isCheckingAuth" class="auth-loading">
+                <div class="loading-spinner"></div>
+                <p>Checking authentication...</p>
+            </div>
+            <div v-else-if="isAuthenticated">
+                <h1>{{ t('attendanceManagement') }}</h1>
+                <div class="card">
+                    <div class="card-header">
+                        <h2>{{ t('attendanceManagementSubtitle') }}</h2>
+                    </div>
 
             <!-- Tab System -->
             <div class="tab-container">
@@ -377,7 +532,9 @@
 
                 <!-- Outlet Attendance Results -->
                 <div v-if="outletAttendance.length > 0" class="attendance-results">
-                    <h3>{{ t('attendanceFor') }} {{ selectedOutletName }} - {{ formatDate(selectedDate) }}</h3>
+                    <div class="attendance-header">
+                        <h3>{{ t('attendanceFor') }} {{ selectedOutletName }} - {{ formatDate(selectedDate) }}</h3>
+                    </div>
                     <table class="attendance-table">
                         <thead>
                             <tr>
@@ -515,6 +672,8 @@
                     {{ t('noEmployeeLogsFound') }}
                 </div>
             </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -522,11 +681,13 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, getDocs, query, where, orderBy, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { firebaseConfig } from './secrets.js';
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
         const { createApp } = Vue;
 
@@ -534,6 +695,9 @@
             data() {
                 return {
                     currentLang: 'zh',
+                    isAuthenticated: false,
+                    isCheckingAuth: true,
+                    userEmail: '',
                     activeTab: 'outlet',
                     isLoading: false,
                     isLoadingEmployee: false,
@@ -644,6 +808,27 @@
             methods: {
                 toggleLanguage() {
                     this.currentLang = this.currentLang === 'zh' ? 'en' : 'zh';
+                },
+                goBack() {
+                    window.location.href = 'index.html';
+                },
+                checkAuthStatus(user) {
+                    if (user) {
+                        this.isAuthenticated = true;
+                        this.userEmail = user.email;
+                    } else {
+                        this.isAuthenticated = false;
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                    }
+                    this.isCheckingAuth = false;
+                    
+                    // Show the app
+                    setTimeout(() => {
+                        document.getElementById('app').classList.add('loaded');
+                        document.getElementById('initial-loading').style.display = 'none';
+                    }, 100);
                 },
                 t(key) {
                     return this.translations[this.currentLang][key] || key;
@@ -898,6 +1083,11 @@
                 }
             },
             mounted() {
+                // Check authentication status
+                onAuthStateChanged(auth, (user) => {
+                    this.checkAuthStatus(user);
+                });
+                
                 this.fetchOutlets();
                 // Set default date to today
                 const today = new Date().toISOString().split('T')[0];
