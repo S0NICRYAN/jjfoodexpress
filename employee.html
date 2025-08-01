@@ -708,13 +708,26 @@
                     this.outletAttendance = [];
                     
                     try {
+                        // First, get all employees from the outlet with their current status
+                        const employeesRef = collection(db, `outlets/${this.selectedOutlet}/employees`);
+                        const employeesSnapshot = await getDocs(employeesRef);
+                        const employees = {};
+                        
+                        employeesSnapshot.docs.forEach(doc => {
+                            const data = doc.data();
+                            employees[data.name] = {
+                                employeeName: data.name,
+                                currentStatus: data.status || 'out'
+                            };
+                        });
+                        
                         // Convert YYYY-MM-DD to dd-mm-yyyy format for Firebase
                         const [year, month, day] = this.selectedDate.split('-');
                         const formattedDate = `${day}-${month}-${year}`;
                         const attendanceRef = collection(db, `attendance/${this.selectedOutlet}/${formattedDate}`);
                         const querySnapshot = await getDocs(attendanceRef);
                         
-                        // Group by employee
+                        // Group by employee and merge with employee status
                         const employeeRecords = {};
                         querySnapshot.docs.forEach(doc => {
                             const data = doc.data();
@@ -725,16 +738,26 @@
                                     employeeName,
                                     clockInTime: null,
                                     clockOutTime: null,
-                                    currentStatus: 'out'
+                                    currentStatus: employees[employeeName]?.currentStatus || 'out'
                                 };
                             }
                             
                             if (data.type === 'clockIn') {
                                 employeeRecords[employeeName].clockInTime = data.clockInTime;
-                                employeeRecords[employeeName].currentStatus = 'in';
                             } else if (data.type === 'clockOut') {
                                 employeeRecords[employeeName].clockOutTime = data.clockOutTime;
-                                employeeRecords[employeeName].currentStatus = 'out';
+                            }
+                        });
+                        
+                        // Add employees who have no attendance records but exist in the employees collection
+                        Object.keys(employees).forEach(employeeName => {
+                            if (!employeeRecords[employeeName]) {
+                                employeeRecords[employeeName] = {
+                                    employeeName,
+                                    clockInTime: null,
+                                    clockOutTime: null,
+                                    currentStatus: employees[employeeName].currentStatus
+                                };
                             }
                         });
                         
