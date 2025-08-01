@@ -807,6 +807,7 @@
             methods: {
                 toggleLanguage() {
                     this.currentLang = this.currentLang === 'zh' ? 'en' : 'zh';
+                    localStorage.setItem('preferred_language', this.currentLang);
                 },
                 goBack() {
                     window.location.href = 'index.html';
@@ -1097,6 +1098,12 @@
                 onAuthStateChanged(auth, (user) => {
                     this.checkAuthStatus(user);
                 });
+                
+                // Load saved language preference
+                const savedLang = localStorage.getItem('preferred_language');
+                if (savedLang && (savedLang === 'zh' || savedLang === 'en')) {
+                    this.currentLang = savedLang;
+                }
                 
                 this.fetchOutlets();
                 // Set default date to today only for outlet view
