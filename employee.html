@@ -1106,8 +1106,10 @@
                 }
                 
                 this.fetchOutlets();
-                // Set default date to today only for outlet view
-                const today = new Date().toISOString().split('T')[0];
+                // Set default date to today using Singapore time
+                const now = new Date();
+                const singaporeTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Singapore"}));
+                const today = singaporeTime.toISOString().split('T')[0];
                 this.selectedDate = today;
                 // Don't auto-fill employee date - let user choose
                 this.selectedEmployeeDate = '';
