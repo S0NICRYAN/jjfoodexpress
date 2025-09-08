@@ -777,19 +777,22 @@
                             lineWidth: 0.1
                         },
                         didDrawPage: function(data) {
-                            // Get the final Y position after the table
-                            const finalY = data.cursor.y;
-                            
-                            // Add some space after the table
-                            let currentY = finalY + 10;
-                            
-                            // Add the 3 lines of information after the table
-                            doc.setFontSize(8);
-                            doc.text('1. All prices are subjected to changes without prior notice', 20, currentY);
-                            currentY += 5;
-                            doc.text('2. Should there be any discrepancy in this statement, please notify us within 7 days', 20, currentY);
-                            currentY += 5;
-                            doc.text('3. Cheques should be crossed and made payable to \'SHIAWASE (S) PTE LTD\'', 20, currentY);
+                            // Only add terms on the final page
+                            if (data.pageNumber === data.pageCount) {
+                                // Get the final Y position after the table
+                                const finalY = data.cursor.y;
+                                
+                                // Add some space after the table
+                                let currentY = finalY + 10;
+                                
+                                // Add the 3 lines of information after the table
+                                doc.setFontSize(8);
+                                doc.text('1. All prices are subjected to changes without prior notice', 20, currentY);
+                                currentY += 5;
+                                doc.text('2. Should there be any discrepancy in this statement, please notify us within 7 days', 20, currentY);
+                                currentY += 5;
+                                doc.text('3. Cheques should be crossed and made payable to \'SHIAWASE (S) PTE LTD\'', 20, currentY);
+                            }
                         }
                     });
 
