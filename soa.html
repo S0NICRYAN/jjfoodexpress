@@ -599,11 +599,27 @@
                         this.orders = querySnapshot.docs
                             .map(doc => ({ id: doc.id, ...doc.data() }))
                             .filter(order => {
-                                if (!order.createdAt) return false;
-                                const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+                                // Use delivery date for filtering instead of creation date
+                                let effectiveDate;
+                                if (order.deliveryDate) {
+                                    // Use delivery date directly
+                                    effectiveDate = new Date(order.deliveryDate);
+                                } else if (order.createdAt) {
+                                    // Fallback to order creation date with cutoff time logic
+                                    const orderDate = order.createdAt.toDate ? order.createdAt.toDate() : new Date(order.createdAt);
+                                    const orderTime = orderDate.getHours() * 60 + orderDate.getMinutes();
+                                    const cutoffTime = 16 * 60 + 30; // 4:30 PM in minutes
+                                    effectiveDate = new Date(orderDate);
+                                    if (orderTime > cutoffTime) {
+                                        effectiveDate.setDate(effectiveDate.getDate() + 1);
+                                    }
+                                } else {
+                                    return false;
+                                }
+                                
                                 return (
-                                    orderDate >= startDate &&
-                                    orderDate <= endDate &&
+                                    effectiveDate >= startDate &&
+                                    effectiveDate <= endDate &&
                                     (order.status === 'processing' || order.status === 'delivered')
                                 );
                             });
